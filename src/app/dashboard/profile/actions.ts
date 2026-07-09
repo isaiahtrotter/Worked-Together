@@ -32,15 +32,26 @@ export async function updateProfile(
       name: formData.get("name"),
       bio: formData.get("bio"),
       website: formData.get("website"),
-      avatar_url: formData.get("avatar_url") || null,
     })
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/profile");
   return { error: null };
+}
+
+export async function updateAvatarUrl(url: string) {
+  const user = await requireSessionUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar_url: url })
+    .eq("user_id", user.id);
+
+  if (error) throw error;
+  revalidatePath("/dashboard");
 }
 
 export async function addWorkSample(
@@ -48,7 +59,7 @@ export async function addWorkSample(
   formData: FormData,
 ): Promise<ActionState> {
   const url = (formData.get("url") as string)?.trim();
-  if (!url) return { error: "Enter a URL first." };
+  if (!url) return { error: "Upload an image first." };
 
   const supabase = await createClient();
   const profileId = await getOwnProfileId();
@@ -64,16 +75,21 @@ export async function addWorkSample(
 
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard/profile");
+  revalidatePath("/dashboard");
   return { error: null };
 }
 
-export async function removeWorkSample(id: string) {
+export async function removeWorkSample(id: string, url: string) {
   const supabase = await createClient();
   await getOwnProfileId();
 
   const { error } = await supabase.from("work_samples").delete().eq("id", id);
   if (error) throw error;
 
-  revalidatePath("/dashboard/profile");
+  const path = url.split("/storage/v1/object/public/work-samples/")[1];
+  if (path) {
+    await supabase.storage.from("work-samples").remove([path]);
+  }
+
+  revalidatePath("/dashboard");
 }

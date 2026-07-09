@@ -48,14 +48,29 @@ const WIDGET_MARKUP = `<div id="widget-root" class="corner-bottom-right">
   </div>
 </div>`;
 
+type WidgetOptions = {
+  mode?: "floating" | "inline";
+  theme?: "light" | "dark";
+  cornerRadius?: number;
+  shadow?: boolean;
+};
+
 declare global {
   interface Window {
     d3?: unknown;
-    __initNetworkWidget?: (data: unknown) => void;
+    __initNetworkWidget?: (data: unknown, options?: WidgetOptions) => void;
   }
 }
 
-export default function NetworkWidget({ embedKey }: { embedKey: string }) {
+export default function NetworkWidget({
+  embedKey,
+  mode = "floating",
+  onReady,
+}: {
+  embedKey: string;
+  mode?: "floating" | "inline";
+  onReady?: () => void;
+}) {
   const initialized = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +88,9 @@ export default function NetworkWidget({ embedKey }: { embedKey: string }) {
         script.src = "/network-widget/widget.js";
         script.async = true;
         script.onload = () => {
-          if (!cancelled) window.__initNetworkWidget?.(widgetData);
+          if (cancelled) return;
+          window.__initNetworkWidget?.(widgetData, { mode });
+          onReady?.();
         };
         document.body.appendChild(script);
       })
@@ -84,11 +101,16 @@ export default function NetworkWidget({ embedKey }: { embedKey: string }) {
     return () => {
       cancelled = true;
     };
-  }, [embedKey]);
+  }, [embedKey, mode, onReady]);
 
   if (error) {
     return <p style={{ color: "#a33", fontSize: 13 }}>Couldn&apos;t load network preview: {error}</p>;
   }
 
-  return <div dangerouslySetInnerHTML={{ __html: WIDGET_MARKUP }} />;
+  return (
+    <div
+      style={mode === "inline" ? { width: "100%", height: "100%" } : undefined}
+      dangerouslySetInnerHTML={{ __html: WIDGET_MARKUP }}
+    />
+  );
 }

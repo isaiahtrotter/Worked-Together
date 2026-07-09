@@ -73,3 +73,59 @@ create policy "users can manage own work samples"
   with check (
     profile_id in (select id from public.profiles where user_id = auth.uid())
   );
+
+-- 6. Per-user widget appearance settings (corner radius / theme / shadow).
+--    One jsonb column so more knobs can be added later without another
+--    migration. Defaults match today's hardcoded widget values.
+alter table public.profiles
+  add column if not exists widget_settings jsonb
+  default '{"theme":"light","cornerRadius":24,"shadow":true}'::jsonb;
+
+-- 7. Storage: "avatars" and "work-samples" buckets already exist per Isaiah.
+--    These policies assume the upload path convention used by the app:
+--      avatars:       {profile_id}.{ext}
+--      work-samples:  {profile_id}/{uuid}.{ext}
+--    i.e. the first path segment (or the whole filename for avatars) is the
+--    uploader's own profile id. Public SELECT is required because the
+--    embedded widget is viewed by anonymous visitors on other people's sites.
+create policy "public can view avatars"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'avatars');
+
+create policy "public can view work samples"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'work-samples');
+
+create policy "users can manage own avatar file"
+  on storage.objects for all
+  to authenticated
+  using (
+    bucket_id = 'avatars'
+    and split_part(name, '.', 1) in (
+      select id::text from public.profiles where user_id = auth.uid()
+    )
+  )
+  with check (
+    bucket_id = 'avatars'
+    and split_part(name, '.', 1) in (
+      select id::text from public.profiles where user_id = auth.uid()
+    )
+  );
+
+create policy "users can manage own work sample files"
+  on storage.objects for all
+  to authenticated
+  using (
+    bucket_id = 'work-samples'
+    and split_part(name, '/', 1) in (
+      select id::text from public.profiles where user_id = auth.uid()
+    )
+  )
+  with check (
+    bucket_id = 'work-samples'
+    and split_part(name, '/', 1) in (
+      select id::text from public.profiles where user_id = auth.uid()
+    )
+  );

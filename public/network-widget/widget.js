@@ -1,4 +1,11 @@
-      window.__initNetworkWidget = function (widgetData) {
+      window.__initNetworkWidget = function (widgetData, options) {
+        options = options || {};
+        var settings = (widgetData.profile && widgetData.profile.widget_settings) || {};
+        var mode = options.mode || "floating";
+        var initialTheme = options.theme || settings.theme || "light";
+        var cornerRadius = options.cornerRadius != null ? options.cornerRadius : (settings.cornerRadius != null ? settings.cornerRadius : 24);
+        var shadowOn = options.shadow != null ? options.shadow : (settings.shadow != null ? settings.shadow : true);
+
         var svg = d3.select("#graph-svg");
         var container = document.getElementById("ring-app");
         var panel = document.getElementById("side-panel");
@@ -6,6 +13,15 @@
         var backdrop = document.getElementById("panel-backdrop");
         var widgetRoot = document.getElementById("widget-root");
         var launcherBtn = document.getElementById("launcher-btn");
+
+        if (mode === "inline") {
+          widgetRoot.classList.add("mode-inline");
+        }
+        widgetRoot.style.setProperty("--wt-radius", cornerRadius + "px");
+        widgetRoot.style.setProperty(
+          "--wt-shadow",
+          shadowOn ? "0 20px 60px rgba(0,0,0,0.25)" : "none",
+        );
 
         var width = container.clientWidth || 460,
           height = container.clientHeight || 560;
@@ -1435,9 +1451,13 @@
 
         assignGridPositions();
         render();
-        applyTheme("light");
+        applyTheme(initialTheme);
         computeBounds();
         panTo("you", true, true);
+
+        if (mode === "inline") {
+          widgetRoot.classList.add("expanded");
+        }
 
         /* ---- floating launcher expand/collapse ---- */
         function expandWidget() {

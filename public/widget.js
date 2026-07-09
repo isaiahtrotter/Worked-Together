@@ -1,6 +1,7 @@
 (function () {
   var thisScript = document.currentScript;
   var embedKey = thisScript.getAttribute("data-embed-key");
+  var mode = thisScript.getAttribute("data-mode") === "inline" ? "inline" : "floating";
   var origin = new URL(thisScript.src, window.location.href).origin;
 
   if (!embedKey) {
@@ -120,7 +121,14 @@
   function injectMarkup() {
     var container = document.createElement("div");
     container.innerHTML = WIDGET_MARKUP;
-    document.body.appendChild(container.firstElementChild);
+    var widgetEl = container.firstElementChild;
+    if (mode === "inline") {
+      // Fills whatever element contains the <script> tag, so the host page
+      // controls the size by sizing that container.
+      thisScript.parentNode.insertBefore(widgetEl, thisScript);
+    } else {
+      document.body.appendChild(widgetEl);
+    }
   }
 
   function loadScript(src) {
@@ -149,7 +157,7 @@
       loadScript(origin + "/network-widget/widget.js"),
     ])
       .then(function (results) {
-        window.__initNetworkWidget(results[0]);
+        window.__initNetworkWidget(results[0], { mode: mode });
       })
       .catch(function (err) {
         console.error("[worked-together widget] failed to load:", err);
