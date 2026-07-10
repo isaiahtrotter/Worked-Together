@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { fetchWidgetData } from "@/lib/fetchWidgetData";
 
 const WIDGET_MARKUP = `<div id="widget-root" class="corner-bottom-right">
@@ -62,7 +62,7 @@ declare global {
   }
 }
 
-export default function NetworkWidget({
+function NetworkWidget({
   embedKey,
   mode = "floating",
   onReady,
@@ -114,3 +114,9 @@ export default function NetworkWidget({
     />
   );
 }
+
+// The widget mounts external scripts and lets vanilla JS mutate its DOM
+// directly (D3, live-preview controls). Re-rendering for unrelated parent
+// state changes re-applies dangerouslySetInnerHTML and wipes that out from
+// under it, so this must only re-render when its own props actually change.
+export default memo(NetworkWidget);

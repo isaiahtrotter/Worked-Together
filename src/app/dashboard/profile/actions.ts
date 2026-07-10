@@ -79,6 +79,26 @@ export async function addWorkSample(
   return { error: null };
 }
 
+export async function reorderWorkSamples(orderedIds: string[]) {
+  const supabase = await createClient();
+  const profileId = await getOwnProfileId();
+
+  const { error } = (
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        supabase
+          .from("work_samples")
+          .update({ sort_order: index })
+          .eq("id", id)
+          .eq("profile_id", profileId),
+      ),
+    )
+  ).find((r) => r.error) ?? { error: null };
+
+  if (error) throw error;
+  revalidatePath("/dashboard");
+}
+
 export async function removeWorkSample(id: string, url: string) {
   const supabase = await createClient();
   await getOwnProfileId();

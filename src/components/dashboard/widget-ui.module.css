@@ -201,6 +201,12 @@
   background-size: cover;
   background-position: center;
   background-color: #e4e3df;
+  cursor: grab;
+  transition: opacity 0.15s ease;
+}
+
+.sampleThumb:active {
+  cursor: grabbing;
 }
 
 .removeThumbBtn {
@@ -220,14 +226,42 @@
 
 /* Connections */
 
-.searchForm {
-  display: flex;
-  gap: 8px;
+.searchWrap {
+  position: relative;
   margin-bottom: 10px;
 }
 
-.searchForm .input {
-  flex: 1;
+.searchWrap .input {
+  width: 100%;
+}
+
+.searchDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.searchDropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  border-radius: 8px;
+}
+
+.searchDropdownItem:hover {
+  background: #f5f4f2;
 }
 
 .connectionRow {

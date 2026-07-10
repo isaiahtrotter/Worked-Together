@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   searchProfilesByName,
   sendConnectionRequest,
@@ -11,6 +11,8 @@ import {
 import styles from "./widget-ui.module.css";
 
 type OtherProfile = { id: string; name: string; avatar_url: string | null } | undefined;
+
+const SEARCH_DEBOUNCE_MS = 200;
 
 export default function ConnectionsSection({
   incoming,
@@ -24,14 +26,42 @@ export default function ConnectionsSection({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestSeq = useRef(0);
 
-  function runSearch(e: React.FormEvent) {
-    e.preventDefault();
-    startTransition(async () => {
-      const { results, error } = await searchProfilesByName(query);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setSearchError(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const seq = ++requestSeq.current;
+    debounceRef.current = setTimeout(async () => {
+      const { results, error } = await searchProfilesByName(trimmed);
+      if (seq !== requestSeq.current) return; // a newer keystroke superseded this
       setResults(results);
       setSearchError(error);
+      setIsSearching(false);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  function handleSendRequest(id: string) {
+    sendConnectionRequest(id).then(() => {
+      setResults((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "pending_outgoing" } : r)),
+      );
     });
   }
 
@@ -39,37 +69,50 @@ export default function ConnectionsSection({
     <div className={styles.card}>
       <p className={styles.cardLabel}>Connections</p>
 
-      <form onSubmit={runSearch} className={styles.searchForm}>
+      <div className={styles.searchWrap}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
           placeholder="Search by name"
           className={styles.input}
         />
-        <button type="submit" disabled={isPending} className={styles.btnSecondary}>
-          {isPending ? "Searching…" : "Search"}
-        </button>
-      </form>
-      {searchError && <p className={styles.error}>{searchError}</p>}
-      <ul className={styles.list}>
-        {results.map((r) => (
-          <li key={r.id} className={styles.row}>
-            <span>{r.name}</span>
-            {r.status === "not_connected" && (
-              <form action={sendConnectionRequest.bind(null, r.id)}>
-                <button type="submit" className={styles.btnSecondary}>
-                  Send request
-                </button>
-              </form>
+        {isOpen && query.trim() && (
+          <div className={styles.searchDropdown}>
+            {isSearching && <div className={styles.searchDropdownItem}>Searching…</div>}
+            {!isSearching && searchError && (
+              <div className={styles.searchDropdownItem}>{searchError}</div>
             )}
-            {r.status === "pending_outgoing" && <span className={styles.badge}>Pending</span>}
-            {r.status === "pending_incoming" && (
-              <span className={styles.badge}>Wants to connect</span>
+            {!isSearching && !searchError && results.length === 0 && (
+              <div className={styles.searchDropdownItem}>No matches.</div>
             )}
-            {r.status === "connected" && <span className={styles.badge}>Connected</span>}
-          </li>
-        ))}
-      </ul>
+            {!isSearching &&
+              results.map((r) => (
+                <div key={r.id} className={styles.searchDropdownItem}>
+                  <span>{r.name}</span>
+                  {r.status === "not_connected" && (
+                    <button
+                      type="button"
+                      className={styles.btnSecondary}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSendRequest(r.id)}
+                    >
+                      Send request
+                    </button>
+                  )}
+                  {r.status === "pending_outgoing" && (
+                    <span className={styles.badge}>Pending</span>
+                  )}
+                  {r.status === "pending_incoming" && (
+                    <span className={styles.badge}>Wants to connect</span>
+                  )}
+                  {r.status === "connected" && <span className={styles.badge}>Connected</span>}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
 
       {incoming.length > 0 && (
         <>

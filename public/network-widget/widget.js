@@ -1464,8 +1464,15 @@
           widgetRoot.classList.add("expanded");
         }
         function collapseWidget() {
+          if (mode === "inline") return;
           widgetRoot.classList.remove("expanded");
         }
+
+        // Lets any element anywhere on the host page open the widget, e.g.
+        // <a data-network-widget-open>View my network</a> (wired up
+        // automatically by public/widget.js), or custom code via
+        // document.dispatchEvent(new CustomEvent("worked-together:open")).
+        document.addEventListener("worked-together:open", expandWidget);
 
         launcherBtn.addEventListener("pointerup", function (e) {
           e.stopPropagation();
@@ -1571,6 +1578,11 @@
 
         document.addEventListener("click", function (e) {
           if (suppressOutsideClick) return;
+          // Don't collapse immediately after an external "open" trigger
+          // (e.g. <a data-network-widget-open>) expanded it in this same click.
+          if (e.target.closest && e.target.closest("[data-network-widget-open]")) {
+            return;
+          }
           if (
             widgetRoot.classList.contains("expanded") &&
             !widgetRoot.contains(e.target)

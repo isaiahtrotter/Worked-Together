@@ -17,7 +17,7 @@ export async function searchProfilesByName(
   query: string,
 ): Promise<{ results: SearchResult[]; error: string | null }> {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return { results: [], error: null };
+  if (trimmed.length < 1) return { results: [], error: null };
 
   const me = await getOwnProfile();
   if (!me) return { results: [], error: "Profile not found." };
@@ -71,7 +71,7 @@ export async function sendConnectionRequest(recipientId: string) {
   });
   if (error) throw error;
 
-  revalidatePath("/dashboard/connections");
+  revalidatePath("/dashboard");
 }
 
 export async function respondToRequest(requestId: string, accept: boolean) {
@@ -82,7 +82,7 @@ export async function respondToRequest(requestId: string, accept: boolean) {
     .eq("id", requestId);
   if (error) throw error;
 
-  revalidatePath("/dashboard/connections");
+  revalidatePath("/dashboard");
 }
 
 export async function saveConnectionNote(formData: FormData): Promise<void> {
@@ -102,5 +102,5 @@ export async function saveConnectionNote(formData: FormData): Promise<void> {
 
   if (error) throw error;
 
-  revalidatePath("/dashboard/connections");
+  revalidatePath("/dashboard");
 }
