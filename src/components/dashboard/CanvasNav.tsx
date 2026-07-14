@@ -47,41 +47,47 @@ export default function CanvasNav({
   onFitView: () => void;
 }) {
   return (
-    <div className={styles.topBar}>
-      <div className={styles.topBarBrand}>
-        <span className={styles.topBarBrandIcon}>W</span>
-        <span className={styles.topBarBrandText}>Worked Together</span>
+    <>
+      <div className={styles.brandChip} data-canvas-passthrough>
+        <span className={styles.brandIcon}>W</span>
+        <span className={styles.brandText}>Worked Together</span>
       </div>
 
-      <nav className={styles.navPills}>
+      <form action={signOut} className={styles.signOutChip} data-canvas-passthrough>
+        <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+      </form>
+
+      <nav className={styles.bottomNav} data-canvas-passthrough>
         {SECTIONS.map((section) => (
           <button
             key={section.id}
             type="button"
-            className={styles.navPill}
+            className={styles.bottomNavItem}
             onClick={() => onNavigate(section.id)}
           >
             {section.icon}
             <span>{section.label}</span>
           </button>
         ))}
-        <button type="button" className={styles.navPill} onClick={onFitView}>
-          Fit view
+
+        <div className={styles.bottomNavDivider} />
+
+        <button type="button" className={styles.bottomNavItem} onClick={onFitView}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+          </svg>
+          <span>Fit view</span>
         </button>
       </nav>
-
-      <div className={styles.topBarRight}>
-        <form action={signOut}>
-          <button type="submit" className={styles.signOutBtn}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Sign out</span>
-          </button>
-        </form>
-      </div>
-    </div>
+    </>
   );
 }

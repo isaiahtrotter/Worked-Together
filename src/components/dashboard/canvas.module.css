@@ -71,32 +71,24 @@
   background: transparent;
 }
 
-/* Top chrome bar — fixed, outside the canvas transform */
+/* Floating chrome — fixed, outside the canvas transform, Figma-style */
 
-.topBar {
+.brandChip {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 56px;
+  top: 16px;
+  left: 16px;
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 0 18px;
-  background: rgba(255, 255, 255, 0.85);
+  gap: 8px;
+  padding: 7px 14px 7px 7px;
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
-.topBarBrand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
-}
-
-.topBarBrandIcon {
+.brandIcon {
   width: 24px;
   height: 24px;
   border-radius: 7px;
@@ -108,66 +100,38 @@
   font-family: "Space Mono", ui-monospace, Menlo, monospace;
   font-weight: 700;
   font-size: 12px;
+  flex-shrink: 0;
 }
 
-.topBarBrandText {
-  font-size: 14px;
+.brandText {
+  font-size: 13.5px;
   font-weight: 600;
   color: #1c1c1a;
   white-space: nowrap;
 }
 
-.navPills {
+.signOutChip {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 20;
   display: flex;
-  gap: 2px;
-}
-
-.navPill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: #4a4a4f;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.navPill svg {
-  color: #8a8a8f;
-  flex-shrink: 0;
-  transition: color 0.15s ease;
-}
-
-.navPill:hover {
-  background: #f5f5f7;
-  color: #1c1c1a;
-}
-
-.navPill:hover svg {
-  color: #635bff;
-}
-
-.topBarRight {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  padding: 4px;
 }
 
 .signOutBtn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border-radius: 8px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   border: none;
   background: none;
-  font-size: 13px;
-  font-weight: 500;
   color: #4a4a4f;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -178,18 +142,75 @@
   color: #1c1c1a;
 }
 
+/* Bottom pill nav — Figma's floating toolbar pattern */
+
+.bottomNav {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.bottomNavItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a4a4f;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.bottomNavItem svg {
+  color: #8a8a8f;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.bottomNavItem:hover {
+  background: #f5f5f7;
+  color: #1c1c1a;
+}
+
+.bottomNavItem:hover svg {
+  color: #635bff;
+}
+
+.bottomNavDivider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
 /* Figma-style inspector panel — fixed, outside the canvas transform */
 
 .inspectorPanel {
   position: fixed;
-  top: 56px;
-  right: 0;
-  bottom: 0;
-  width: 340px;
+  top: 76px;
+  right: 16px;
+  bottom: 20px;
+  width: 320px;
   background: #ffffff;
-  border-left: 1px solid rgba(0, 0, 0, 0.09);
-  box-shadow: -10px 0 28px rgba(0, 0, 0, 0.07);
-  transform: translateX(100%);
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.07);
+  transform: translateX(calc(100% + 24px));
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 15;
   overflow-y: auto;

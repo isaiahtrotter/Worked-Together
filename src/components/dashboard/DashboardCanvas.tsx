@@ -23,12 +23,12 @@ import YourNetworkSection from "./YourNetworkSection";
 import styles from "./canvas.module.css";
 import widgetUiStyles from "./widget-ui.module.css";
 
-const INSPECTOR_PANEL_WIDTH = 340;
+const INSPECTOR_PANEL_WIDTH = 356;
 
 const FRAMES: CanvasFrame[] = [
-  { id: "profile", x: 0, y: 0, width: 1300, height: 760, label: "Profile" },
-  { id: "connections", x: 1600, y: 0, width: 1300, height: 900, label: "Connections" },
-  { id: "widget-preview", x: 0, y: 1120, width: 1300, height: 760, label: "Widget" },
+  { id: "profile", x: 0, y: 0, width: 820, height: 950, label: "Profile" },
+  { id: "connections", x: 900, y: 0, width: 1300, height: 900, label: "Connections" },
+  { id: "widget-preview", x: 0, y: 1030, width: 1300, height: 760, label: "Widget" },
 ];
 
 type SelectedFrame = "button" | "inline" | null;
@@ -219,13 +219,9 @@ export default function DashboardCanvas({
         style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
       >
         <Frame frame={FRAMES[0]}>
-          <div className={widgetUiStyles.page}>
-            <div className={widgetUiStyles.mainCol}>
-              <ProfileSection profile={profile} />
-            </div>
-            <div className={widgetUiStyles.mainCol}>
-              <WorkSamplesSection profileId={profile.id} workSamples={workSamples} />
-            </div>
+          <div className={widgetUiStyles.mainCol}>
+            <ProfileSection profile={profile} />
+            <WorkSamplesSection profileId={profile.id} workSamples={workSamples} />
           </div>
         </Frame>
 

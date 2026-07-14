@@ -16,7 +16,7 @@ export type CanvasTransform = { x: number; y: number; scale: number };
 
 const MIN_SCALE = 0.4;
 const MAX_SCALE = 1.5;
-const BOUNDS_PADDING = 260;
+const BOUNDS_PADDING = 160;
 const PASSTHROUGH_SELECTOR = "[data-canvas-passthrough]";
 
 function clamp(value: number, min: number, max: number) {

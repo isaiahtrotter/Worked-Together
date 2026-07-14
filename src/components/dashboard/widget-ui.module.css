@@ -360,15 +360,15 @@
 
 .sampleGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
   margin: 0 0 10px;
 }
 
 .sampleThumb {
   position: relative;
   aspect-ratio: 4 / 3;
-  border-radius: 10px;
+  border-radius: 14px;
   overflow: hidden;
   background-size: cover;
   background-position: center;
@@ -395,11 +395,11 @@
 
 .sampleSlotEmpty {
   aspect-ratio: 4 / 3;
-  border-radius: 10px;
+  border-radius: 14px;
   border: 1.5px dashed rgba(0, 0, 0, 0.22);
   background-color: #fafafa;
   color: #8a8a8f;
-  font-size: 20px;
+  font-size: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -420,15 +420,15 @@
 
 .removeThumbBtn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   transition: background-color 0.15s ease, transform 0.15s ease;

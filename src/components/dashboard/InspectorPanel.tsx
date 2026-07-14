@@ -81,6 +81,7 @@ export default function InspectorPanel({
   return (
     <div
       data-inspector-panel
+      data-canvas-passthrough
       className={`${canvasStyles.inspectorPanel} ${open ? canvasStyles.inspectorPanelOpen : ""}`}
     >
       {selectedFrame === "inline" && (
