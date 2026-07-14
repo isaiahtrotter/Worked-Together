@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { WorkSample } from "@/lib/dal";
 import {
@@ -34,6 +34,8 @@ export default function WorkSamplesSection({
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const thumbRefs = useRef(new Map<string, HTMLDivElement>());
+  const prevRectsRef = useRef(new Map<string, DOMRect>());
 
   useEffect(() => {
     setSamples(workSamples);
@@ -41,6 +43,37 @@ export default function WorkSamplesSection({
 
   useEffect(() => {
     updateOwnerPreview({ workSamples: samples });
+  }, [samples]);
+
+  // FLIP: when a sample's grid position changes (reorder, add, remove),
+  // the browser has already snapped it to its new spot by the time this
+  // runs — so animate FROM the old offset back to zero instead, giving the
+  // "magnetized slide into place" feel rather than an instant jump.
+  useLayoutEffect(() => {
+    const nextRects = new Map<string, DOMRect>();
+    thumbRefs.current.forEach((el, id) => {
+      nextRects.set(id, el.getBoundingClientRect());
+    });
+
+    nextRects.forEach((next, id) => {
+      const prev = prevRectsRef.current.get(id);
+      const el = thumbRefs.current.get(id);
+      if (!prev || !el) return;
+
+      const dx = prev.left - next.left;
+      const dy = prev.top - next.top;
+      if (!dx && !dy) return;
+
+      el.style.transition = "none";
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      el.getBoundingClientRect(); // force reflow so the start position takes effect
+      requestAnimationFrame(() => {
+        el.style.transition = "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)";
+        el.style.transform = "";
+      });
+    });
+
+    prevRectsRef.current = nextRects;
   }, [samples]);
 
   function handleRemove(id: string, url: string) {
@@ -129,6 +162,10 @@ export default function WorkSamplesSection({
             return (
               <div
                 key={sample.id}
+                ref={(el) => {
+                  if (el) thumbRefs.current.set(sample.id, el);
+                  else thumbRefs.current.delete(sample.id);
+                }}
                 className={`${styles.sampleThumb} ${overIndex === index && dragIndex !== null && dragIndex !== index ? styles.sampleThumbDragOver : ""}`}
                 style={{
                   backgroundImage: `url(${sample.url})`,
@@ -192,14 +229,8 @@ export default function WorkSamplesSection({
         })}
       </div>
 
-      {samples.length > 1 && (
-        <p className={styles.hint} style={{ marginTop: -6, marginBottom: 8 }}>
-          Drag a sample to reorder it.
-        </p>
-      )}
       <p className={styles.hint} style={{ margin: 0 }}>
-        JPG, PNG, WEBP, or GIF. Max 5MB each — click an empty slot or drag an
-        image into it.
+        Drag a sample to reorder it. JPG, PNG, WEBP, or GIF. Max 5MB each.
       </p>
       {error && <p className={styles.error}>{error}</p>}
     </div>

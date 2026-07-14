@@ -54,7 +54,7 @@ export async function updateAvatarUrl(url: string) {
   revalidatePath("/dashboard");
 }
 
-export async function updateBannerUrl(url: string) {
+export async function updateBannerUrl(url: string | null) {
   const user = await requireSessionUser();
   const supabase = await createClient();
 

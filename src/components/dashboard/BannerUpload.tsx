@@ -70,23 +70,59 @@ export default function BannerUpload({
     }
   }
 
+  async function handleRemove() {
+    setError(null);
+    const previous = preview;
+    setPreview(null);
+    updateOwnerPreview({ bannerUrl: null });
+    try {
+      await updateBannerUrl(null);
+      const path = previous
+        ?.split("/storage/v1/object/public/avatars/")[1]
+        ?.split("?")[0];
+      if (path) {
+        const supabase = createClient();
+        await supabase.storage.from("avatars").remove([path]);
+      }
+      router.refresh();
+    } catch (err) {
+      setPreview(previous);
+      updateOwnerPreview({ bannerUrl: previous });
+      setError(err instanceof Error ? err.message : "Couldn't remove banner.");
+    }
+  }
+
   return (
     <div>
-      <button
-        type="button"
+      <div
         className={styles.bannerRect}
-        onClick={() => inputRef.current?.click()}
         style={preview ? { backgroundImage: `url(${preview})` } : undefined}
-        aria-label="Change banner"
       >
-        {!preview && (uploading ? "Uploading…" : "+ Add banner")}
-        <span className={styles.photoHoverOverlay}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-        </span>
-      </button>
+        <button
+          type="button"
+          className={styles.bannerClickArea}
+          onClick={() => inputRef.current?.click()}
+          aria-label="Change banner"
+        >
+          {!preview && (uploading ? "Uploading…" : "+ Add banner")}
+          <span className={styles.photoHoverOverlay}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </span>
+        </button>
+        {preview && (
+          <button
+            type="button"
+            className={styles.removeThumbBtn}
+            onClick={handleRemove}
+            aria-label="Remove banner"
+          >
+            ×
+          </button>
+        )}
+      </div>
       <p className={styles.hint}>
         JPG, PNG, or WEBP. Max 3MB. Best at a 3:1 ratio (e.g. 1200×400px) —
         it&apos;s cropped to fill, so keep the important part centered.
