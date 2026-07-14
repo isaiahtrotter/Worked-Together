@@ -1168,68 +1168,6 @@
           if (!skipPanel) openPanel(id);
         }
 
-        function setupDragScroll(row) {
-          if (!row) return;
-          var isDown = false,
-            startX = 0,
-            startScroll = 0;
-          var targetScroll = row.scrollLeft;
-          var scrollRAF = null;
-
-          function animateScroll() {
-            var current = row.scrollLeft;
-            var diff = targetScroll - current;
-            if (Math.abs(diff) < 0.5) {
-              row.scrollLeft = targetScroll;
-              scrollRAF = null;
-              return;
-            }
-            row.scrollLeft = current + diff * 0.18;
-            scrollRAF = requestAnimationFrame(animateScroll);
-          }
-
-          row.addEventListener("mousedown", function (e) {
-            if (scrollRAF) {
-              cancelAnimationFrame(scrollRAF);
-              scrollRAF = null;
-            }
-            isDown = true;
-            row.style.cursor = "grabbing";
-            startX = e.pageX;
-            startScroll = row.scrollLeft;
-            targetScroll = row.scrollLeft;
-          });
-          row.addEventListener("mousemove", function (e) {
-            if (!isDown) return;
-            e.preventDefault();
-            row.scrollLeft = startScroll - (e.pageX - startX);
-            targetScroll = row.scrollLeft;
-          });
-          row.addEventListener("mouseup", function () {
-            isDown = false;
-            row.style.cursor = "grab";
-            targetScroll = row.scrollLeft;
-          });
-          row.addEventListener("mouseleave", function () {
-            isDown = false;
-            row.style.cursor = "grab";
-          });
-
-          row.addEventListener(
-            "wheel",
-            function (e) {
-              if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                e.preventDefault();
-                var maxScroll = row.scrollWidth - row.clientWidth;
-                targetScroll = clamp(targetScroll + e.deltaY, 0, maxScroll);
-                if (!scrollRAF)
-                  scrollRAF = requestAnimationFrame(animateScroll);
-              }
-            },
-            { passive: false },
-          );
-        }
-
         function pillHTML(color, t) {
           return (
             '<span class="wm-pill" style="background:linear-gradient(180deg,' +
@@ -1275,7 +1213,6 @@
             bg: mixHex(C, t.panelBg, 0.18),
             text: mixHex(C, t.textPrimary, 0.6),
           };
-          var banner = mixHex(C, t.panelBg, 0.32);
           var avatar = C;
           var avatarImg = avatarUrl(id);
           var workColors = [
@@ -1297,7 +1234,7 @@
               "</a>";
 
           var tileStyle =
-            "flex:0 0 62%;aspect-ratio:4/3;overflow:hidden;border-radius:10px;pointer-events:none;background-size:cover;background-position:center;";
+            "width:100%;aspect-ratio:4/3;overflow:hidden;border-radius:10px;pointer-events:none;background-size:cover;background-position:center;";
           var showcase = "";
           var workSamples = person.workSamples || [];
           if (workSamples.length > 0) {
@@ -1321,7 +1258,7 @@
               '<div style="padding:0 18px;">' +
               wmLabel(t, "Recent work") +
               "</div>" +
-              '<div id="showcase-row" class="showcase-row" style="display:flex;gap:4px;overflow-x:auto;padding:0 18px 20px;margin:0;cursor:grab;">' +
+              '<div id="showcase-row" class="showcase-row" style="display:flex;flex-direction:column;gap:8px;padding:0 18px 20px;margin:0;">' +
               tiles +
               "</div>";
           }
@@ -1373,23 +1310,6 @@
               "</div>";
           }
 
-          var sunrise =
-            "radial-gradient(120% 130% at 22% 118%, " +
-            mixHex("#F5C518", C, 0.55) +
-            "CC 0%, transparent 52%)," +
-            "radial-gradient(110% 120% at 82% 108%, " +
-            C +
-            "B3 0%, transparent 58%)," +
-            "linear-gradient(158deg, #C9D8EA 0%, " +
-            mixHex(C, "#C9D8EA", 0.35) +
-            " 100%)";
-
-          var bannerStyle = person.bannerUrl
-            ? "background-image:url(" +
-              person.bannerUrl +
-              ");background-size:cover;background-position:center;"
-            : "background:" + sunrise + ";";
-
           var relBlock = person.relationship
             ? '<p style="font-size:12.5px;line-height:1.3;color:' +
               C +
@@ -1399,22 +1319,21 @@
             : "";
 
           panelContent.innerHTML =
-            '<div style="position:relative;height:104px;">' +
-            '<div style="position:absolute;inset:0;' +
-            bannerStyle +
-            '"></div>' +
-            '<button id="close-panel" type="button" style="position:absolute;top:12px;right:12px;width:26px;height:26px;min-width:26px;min-height:26px;padding:0;margin:0;line-height:1;box-sizing:border-box;border-radius:50%;background:rgba(0,0,0,0.4);color:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;">' +
-            icon("x", 15) +
-            "</button>" +
-            '<div style="position:absolute;left:18px;top:72px;width:64px;height:64px;border-radius:50%;background-color:' +
+            '<div style="position:relative;padding:16px 18px 0;">' +
+            '<div style="width:64px;height:64px;border-radius:50%;background-color:' +
             avatar +
             ";background-image:url(" +
             avatarImg +
-            ");background-size:cover;background-position:center;z-index:2;box-shadow:0 0 0 3px " +
-            t.panelBg +
-            ';"></div>' +
+            ');background-size:cover;background-position:center;"></div>' +
+            '<button id="close-panel" type="button" style="position:absolute;top:16px;right:14px;width:26px;height:26px;min-width:26px;min-height:26px;padding:0;margin:0;line-height:1;box-sizing:border-box;border-radius:50%;background:' +
+            t.chip +
+            ";color:" +
+            t.textSecondary +
+            ';border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;">' +
+            icon("x", 15) +
+            "</button>" +
             "</div>" +
-            '<div style="padding:44px 18px 0 18px;">' +
+            '<div style="padding:14px 18px 0 18px;">' +
             (roleLabel
               ? '<div style="margin-bottom:10px;">' +
                 '<span class="wm-label" style="color:' +
@@ -1448,7 +1367,6 @@
           document
             .getElementById("close-panel")
             .addEventListener("click", closePanel);
-          setupDragScroll(document.getElementById("showcase-row"));
 
           panel.style.transform = "translateX(0)";
           panel.style.boxShadow = "-10px 0 30px " + t.shadow;

@@ -365,14 +365,6 @@ body { margin:0; font-family: -apple-system, sans-serif; }
           stroke-dashoffset: -13;
         }
       }
-      .showcase-row {
-        scrollbar-width: none;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .showcase-row::-webkit-scrollbar {
-        display: none;
-      }
       @media (prefers-reduced-motion: no-preference) {
         .ring-focused {
           animation: ringPulse 2.2s ease-in-out infinite;
