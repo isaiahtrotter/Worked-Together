@@ -69,7 +69,16 @@ export default function EmbedDesigner({
   embedKey: string;
   initialSettings: WidgetSettings | null;
 }) {
-  const settings = initialSettings ?? DEFAULT_SETTINGS;
+  // Merge field-by-field rather than initialSettings ?? DEFAULT_SETTINGS —
+  // existing profiles saved their widget_settings under the old schema
+  // (boolean shadow, no button-style fields at all), so an all-or-nothing
+  // fallback leaves those new fields undefined and crashes the sliders below.
+  const settings: WidgetSettings = { ...DEFAULT_SETTINGS, ...initialSettings };
+  // shadow itself used to be a boolean; coerce old saved values to the new
+  // 0-100 scale (mirrors the same coercion in the widget engine).
+  const rawShadow = settings.shadow as number | boolean;
+  const initialShadow = typeof rawShadow === "boolean" ? (rawShadow ? 60 : 0) : rawShadow;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const currentThemeRef = useRef(settings.theme);
 
@@ -77,7 +86,7 @@ export default function EmbedDesigner({
     Math.min(settings.cornerRadius, MAX_CORNER_RADIUS),
   );
   const [theme, setTheme] = useState(settings.theme);
-  const [shadow, setShadow] = useState(settings.shadow);
+  const [shadow, setShadow] = useState(initialShadow);
   const [buttonFontSize, setButtonFontSize] = useState(settings.buttonFontSize);
   const [buttonFontWeight, setButtonFontWeight] = useState(settings.buttonFontWeight);
   const [buttonLetterSpacing, setButtonLetterSpacing] = useState(settings.buttonLetterSpacing);
