@@ -2,7 +2,13 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignInButton() {
+export default function SignInButton({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   const supabase = createClient();
 
   async function signIn() {
@@ -13,8 +19,8 @@ export default function SignInButton() {
   }
 
   return (
-    <button onClick={signIn} className="google-signin-btn">
-      Continue with Google
+    <button onClick={signIn} className={className ?? "google-signin-btn"}>
+      {children ?? "Continue with Google"}
     </button>
   );
 }
