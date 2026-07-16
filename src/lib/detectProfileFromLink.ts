@@ -53,6 +53,16 @@ function pickByPreference(tags: Map<string, string>, namesInPreferenceOrder: str
   return null;
 }
 
+// X/Twitter's og:title/twitter:title on profile pages is the display name
+// plus a platform suffix, e.g. "Elon Musk (@elonmusk) on X" — strip that
+// suffix so the detected name is just the name.
+const TWITTER_TITLE_SUFFIX_REGEX = /\s*\(@[A-Za-z0-9_]+\)\s*(?:on\s+X|\/\s*(?:X|Twitter))\s*$/i;
+
+function cleanDetectedName(name: string | null): string | null {
+  if (!name) return name;
+  return name.replace(TWITTER_TITLE_SUFFIX_REGEX, "").trim() || null;
+}
+
 // Some sites' og:image is the person's actual profile photo (GitHub,
 // X/Twitter); on others it's whatever they last posted (Dribbble's og:image
 // is their latest shot, not a headshot). A URL explicitly labeled "avatar"
@@ -91,7 +101,7 @@ export async function detectProfileFromLink(url: string): Promise<DetectedProfil
     const html = fullText.slice(0, MAX_HTML_BYTES);
 
     const tags = collectMetaTags(html);
-    const name = pickByPreference(tags, ["og:title", "twitter:title"]);
+    const name = cleanDetectedName(pickByPreference(tags, ["og:title", "twitter:title"]));
     const imageUrl =
       findAvatarUrl(html) ?? pickByPreference(tags, ["og:image", "twitter:image"]);
     return { name, imageUrl };

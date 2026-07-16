@@ -200,6 +200,7 @@
           website: profile.website,
           avatarOverride: profile.avatar_url || null,
           workSamples: profile.workSamples || [],
+          endorsements: profile.endorsements || [],
         };
 
         rawConnections.forEach(function (c) {
@@ -209,7 +210,7 @@
             role: "connection",
             bio: c.bio,
             website: c.website,
-            endorsement: c.endorsement || null,
+            endorsements: c.endorsements || [],
             relationship: c.relationship || null,
             avatarOverride: c.avatar_url || null,
             workSamples: c.workSamples || [],
@@ -218,9 +219,6 @@
 
         var ownerConnections = rawConnections.map(function (c) {
           return c.id;
-        });
-        var endorserIds = ownerConnections.filter(function (id) {
-          return !!db[id].endorsement;
         });
         // Peer-to-peer lines between contacts (who-knows-who) are a
         // future enhancement -- v1 only draws owner -> contact lines.
@@ -888,7 +886,8 @@
 
           var badgeEnter = enter
             .filter(function (d) {
-              return !!db[d.id].endorsement;
+              var endorsements = db[d.id].endorsements;
+              return !!(endorsements && endorsements.length > 0);
             })
             .append("g")
             .attr("class", "endorse-badge")
@@ -992,19 +991,15 @@
               '">' +
               d.website +
               "</span></div>";
-          if (d.endorsement)
-            rows +=
-              '<div class="wm-label" style="display:flex;align-items:center;gap:6px;color:#8A6100;margin-top:10px;">' +
-              starIcon(12) +
-              "<span>Endorses Isaiah</span></div>";
-          if (d.id === "you" && endorserIds.length > 0)
+          var endorsementCount = (d.endorsements || []).length;
+          if (endorsementCount > 0)
             rows +=
               '<div class="wm-label" style="display:flex;align-items:center;gap:6px;color:#8A6100;margin-top:10px;">' +
               starIcon(12) +
               "<span>" +
-              endorserIds.length +
+              endorsementCount +
               " endorsement" +
-              (endorserIds.length === 1 ? "" : "s") +
+              (endorsementCount === 1 ? "" : "s") +
               "</span></div>";
 
           hoverCard.style.background = t.panelBg;
@@ -1279,19 +1274,6 @@
             "</div>"
           );
         }
-        function endorsementBlock(t, label, quote, color) {
-          return (
-            wmLabel(t, label, starIcon(11)) +
-            '<div style="background:' +
-            t.surface1 +
-            ";border-radius:10px;padding:11px 13px;font-size:12.5px;line-height:1.5;color:" +
-            t.textPrimary +
-            ';margin-bottom:16px;">\u201C' +
-            quote +
-            "\u201D</div>"
-          );
-        }
-
         function openPanel(id) {
           currentPanelId = id;
           var person = db[id];
@@ -1352,21 +1334,21 @@
               "</div>";
           }
 
-          var endorsementHtml = person.endorsement
-            ? endorsementBlock(
-                t,
-                "Endorses Isaiah Trotter",
-                person.endorsement,
-                C,
-              )
-            : "";
-
+          // Anyone who has endorsed this person, from anywhere in the
+          // system -- not just endorsers who happen to also be a connection
+          // of whoever's widget is being viewed (see fetchEndorsementsByTarget
+          // in fetchWidgetData.ts). Shown for every node, including "you".
           var allEndorsementsHtml = "";
-          if (id === "you" && endorserIds.length > 0) {
-            var items = endorserIds
-              .map(function (eid) {
-                var ep = db[eid],
-                  ecolor = personColor(eid);
+          var personEndorsements = person.endorsements || [];
+          if (personEndorsements.length > 0) {
+            var items = personEndorsements
+              .map(function (e) {
+                var ecolor = personColor(e.fromId);
+                var eAvatar =
+                  e.fromAvatarUrl ||
+                  "https://api.dicebear.com/10.x/glyphs/png?seed=" +
+                    encodeURIComponent(e.fromId) +
+                    "&size=128";
                 return (
                   '<div style="display:flex;gap:10px;padding:13px 0;border-top:1px solid ' +
                   t.border +
@@ -1374,18 +1356,18 @@
                   '<div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;background-color:' +
                   ecolor +
                   ";background-image:url(" +
-                  avatarUrl(eid) +
+                  eAvatar +
                   ');background-size:cover;background-position:center;"></div>' +
                   '<div style="flex:1;min-width:0;">' +
                   '<p class="wm-label" style="margin:2px 0 5px;color:' +
                   t.textPrimary +
                   ';">' +
-                  ep.name +
+                  e.fromName +
                   "</p>" +
                   '<p style="font-size:12.5px;line-height:1.5;margin:0;color:' +
                   t.textSecondary +
                   ';">\u201C' +
-                  ep.endorsement +
+                  e.text +
                   "\u201D</p>" +
                   "</div>" +
                   "</div>"
@@ -1437,13 +1419,16 @@
             ';font-family:-apple-system,BlinkMacSystemFont,sans-serif;">' +
             person.name +
             "</p>" +
-            '<p style="font-size:12.5px;color:' +
-            t.textSecondary +
-            ';margin:0 0 20px;">' +
-            person.bio +
-            "</p>" +
+            // Placeholder (unclaimed) profiles never get a bio set, so this
+            // is often empty -- skip the line rather than rendering "null".
+            (person.bio
+              ? '<p style="font-size:12.5px;color:' +
+                t.textSecondary +
+                ';margin:0 0 20px;">' +
+                person.bio +
+                "</p>"
+              : "") +
             relBlock +
-            endorsementHtml +
             '<div style="border-top:1px solid ' +
             t.border +
             ';padding:16px 0 20px;">' +

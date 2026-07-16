@@ -18,11 +18,66 @@ function fetchWorkSamples(profileId: string) {
   );
 }
 
-async function buildConnections(profile: { id: string }) {
+type EndorsementRow = { id: string; from_profile_id: string; to_profile_id: string; text: string };
+type EndorserInfo = { name: string; avatar_url: string | null };
+export type WidgetEndorsement = {
+  id: string;
+  fromId: string;
+  fromName: string;
+  fromAvatarUrl: string | null;
+  text: string;
+};
+
+// An endorsement is written from someone's own dashboard about any of their
+// connections (see saveEndorsement), so "who endorsed X" can include people
+// who aren't connections of the widget's own owner (e.g. a mutual connection
+// of a connection). Fetched globally by to_profile_id rather than scoped to
+// the owner's own connection list, then joined with whatever endorser
+// identities aren't already known from this widget's own data.
+async function fetchEndorsementsByTarget(
+  nodeIds: string[],
+  knownProfiles: Map<string, EndorserInfo>,
+): Promise<Map<string, WidgetEndorsement[]>> {
+  const byTarget = new Map<string, WidgetEndorsement[]>();
+  if (!nodeIds.length) return byTarget;
+
+  const rows: EndorsementRow[] = await fetchJSON(
+    `endorsements?to_profile_id=in.(${nodeIds.join(",")})&select=*`,
+  );
+  if (!rows.length) return byTarget;
+
+  const missingIds = Array.from(new Set(rows.map((r) => r.from_profile_id))).filter(
+    (id) => !knownProfiles.has(id),
+  );
+  if (missingIds.length) {
+    const extra: { id: string; name: string; avatar_url: string | null }[] = await fetchJSON(
+      `profiles?id=in.(${missingIds.join(",")})&select=id,name,avatar_url`,
+    );
+    extra.forEach((p) => knownProfiles.set(p.id, { name: p.name, avatar_url: p.avatar_url }));
+  }
+
+  rows.forEach((row) => {
+    const info = knownProfiles.get(row.from_profile_id);
+    const list = byTarget.get(row.to_profile_id) ?? [];
+    list.push({
+      id: row.id,
+      fromId: row.from_profile_id,
+      fromName: info?.name ?? "Someone",
+      fromAvatarUrl: info?.avatar_url ?? null,
+      text: row.text,
+    });
+    byTarget.set(row.to_profile_id, list);
+  });
+  return byTarget;
+}
+
+async function buildConnections(profile: { id: string; name: string; avatar_url: string | null }) {
   const reqFilter =
     `connection_requests?status=eq.accepted&or=(requester_id.eq.${profile.id},recipient_id.eq.${profile.id})&select=*`;
   const requests = await fetchJSON(reqFilter);
-  if (!requests.length) return [];
+  if (!requests.length) {
+    return { connections: [], endorsementsByTarget: new Map<string, WidgetEndorsement[]>() };
+  }
 
   const otherIds = requests.map((r: { requester_id: string; recipient_id: string }) =>
     r.requester_id === profile.id ? r.recipient_id : r.requester_id,
@@ -30,25 +85,29 @@ async function buildConnections(profile: { id: string }) {
   const idList = otherIds.join(",");
   const requestIds = requests.map((r: { id: string }) => r.id).join(",");
 
-  const [otherProfiles, endorsements, myNotes, allWorkSamples] =
-    await Promise.all([
-      fetchJSON(`profiles?id=in.(${idList})&select=*`),
-      fetchJSON(
-        `endorsements?to_profile_id=eq.${profile.id}&from_profile_id=in.(${idList})&select=*`,
-      ),
-      fetchJSON(
-        `connection_notes?connection_request_id=in.(${requestIds})&profile_id=eq.${profile.id}&select=*`,
-      ),
-      fetchJSON(`work_samples?profile_id=in.(${idList})&select=*&order=sort_order`),
-    ]);
+  const [otherProfiles, myNotes, allWorkSamples] = await Promise.all([
+    fetchJSON(`profiles?id=in.(${idList})&select=*`),
+    fetchJSON(
+      `connection_notes?connection_request_id=in.(${requestIds})&profile_id=eq.${profile.id}&select=*`,
+    ),
+    fetchJSON(`work_samples?profile_id=in.(${idList})&select=*&order=sort_order`),
+  ]);
 
-  return otherProfiles.map((other: { id: string; name: string; bio: string; website: string; avatar_url: string }) => {
+  const knownProfiles = new Map<string, EndorserInfo>();
+  knownProfiles.set(profile.id, { name: profile.name, avatar_url: profile.avatar_url });
+  (otherProfiles as { id: string; name: string; avatar_url: string | null }[]).forEach((p) => {
+    knownProfiles.set(p.id, { name: p.name, avatar_url: p.avatar_url });
+  });
+
+  const endorsementsByTarget = await fetchEndorsementsByTarget(
+    [profile.id, ...otherIds],
+    knownProfiles,
+  );
+
+  const connections = otherProfiles.map((other: { id: string; name: string; bio: string; website: string; avatar_url: string }) => {
     const req = requests.find(
       (r: { requester_id: string; recipient_id: string }) =>
         r.requester_id === other.id || r.recipient_id === other.id,
-    );
-    const end = endorsements.find(
-      (e: { from_profile_id: string }) => e.from_profile_id === other.id,
     );
     const myNote = req
       ? myNotes.find(
@@ -67,10 +126,12 @@ async function buildConnections(profile: { id: string }) {
       website: other.website,
       avatar_url: other.avatar_url,
       relationship: myNote ? myNote.note : "",
-      endorsement: end ? end.text : "",
+      endorsements: endorsementsByTarget.get(other.id) ?? [],
       workSamples: samples,
     };
   });
+
+  return { connections, endorsementsByTarget };
 }
 
 export async function fetchWidgetData(embedKey: string) {
@@ -82,11 +143,12 @@ export async function fetchWidgetData(embedKey: string) {
   }
   const profile = profiles[0];
 
-  const [connections, workSamples] = await Promise.all([
+  const [{ connections, endorsementsByTarget }, workSamples] = await Promise.all([
     buildConnections(profile),
     fetchWorkSamples(profile.id),
   ]);
 
   profile.workSamples = workSamples;
+  profile.endorsements = endorsementsByTarget.get(profile.id) ?? [];
   return { profile, connections };
 }

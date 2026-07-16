@@ -189,15 +189,11 @@ async function reuploadAvatarFromUrl(
 }
 
 export async function addPlaceholderConnection({
-  name,
   link,
 }: {
-  name: string;
   link: string;
 }): Promise<{ error: string | null }> {
-  const trimmedName = name.trim();
   const trimmedLink = link.trim();
-  if (!trimmedName) return { error: "Name is required." };
   if (!trimmedLink) return { error: "Link is required." };
 
   const me = await getOwnProfile();
@@ -205,11 +201,14 @@ export async function addPlaceholderConnection({
 
   const supabase = await createClient();
   const detected = await detectProfileFromLink(trimmedLink);
+  if (!detected.name) {
+    return { error: "Couldn't find a name at that link — try a different link." };
+  }
 
   const { data: placeholder, error: insertError } = await supabase
     .from("profiles")
     .insert({
-      name: detected.name || trimmedName,
+      name: detected.name,
       website: trimmedLink,
       user_id: null,
       placeholder_owner_id: me.id,

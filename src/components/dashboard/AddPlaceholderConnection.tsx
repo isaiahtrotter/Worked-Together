@@ -9,7 +9,6 @@ import styles from "./widget-ui.module.css";
 export default function AddPlaceholderConnection() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +18,7 @@ export default function AddPlaceholderConnection() {
     setSubmitting(true);
     setError(null);
 
-    const result = await addPlaceholderConnection({ name, link });
+    const result = await addPlaceholderConnection({ link });
     setSubmitting(false);
 
     if (result.error) {
@@ -27,7 +26,6 @@ export default function AddPlaceholderConnection() {
       return;
     }
 
-    setName("");
     setLink("");
     setIsOpen(false);
     router.refresh();
@@ -49,17 +47,7 @@ export default function AddPlaceholderConnection() {
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
       <div className={styles.fieldRowGroup}>
-        <div className={styles.fieldRow} style={{ flex: "1 1 140px" }}>
-          <span className={styles.label}>Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Their name"
-            className={styles.input}
-            required
-          />
-        </div>
-        <div className={styles.fieldRow} style={{ flex: "1 1 200px" }}>
+        <div className={styles.fieldRow} style={{ flex: "1 1 100%" }}>
           <span className={styles.label}>Link to their work</span>
           <input
             value={link}
