@@ -10,7 +10,7 @@
   var origin = new URL(thisScript.src, window.location.href).origin;
 
   if (!embedKey) {
-    console.error("[worked-together widget] missing data-embed-key attribute");
+    console.error("[linkenode widget] missing data-embed-key attribute");
     return;
   }
 
@@ -228,7 +228,7 @@
       var trigger = e.target.closest && e.target.closest("[data-network-widget-open]");
       if (!trigger) return;
       e.preventDefault();
-      document.dispatchEvent(new CustomEvent("worked-together:open"));
+      document.dispatchEvent(new CustomEvent("linkenode:open"));
     });
   }
 
@@ -254,7 +254,7 @@
         });
       })
       .catch(function (err) {
-        console.error("[worked-together widget] failed to load:", err);
+        console.error("[linkenode widget] failed to load:", err);
       });
   }
 

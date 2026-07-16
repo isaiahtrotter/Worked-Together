@@ -15,7 +15,7 @@ export default async function Home() {
 
   return (
     <div className={styles.page}>
-      <h1>Worked Together</h1>
+      <h1>Linkenode</h1>
       <p>Sign in to manage your network and get your embed code.</p>
       <SignInButton />
     </div>

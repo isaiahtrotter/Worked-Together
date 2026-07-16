@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Worked Together",
+  title: "Linkenode",
   description: "Manage your network and embed it on your site",
 };
 

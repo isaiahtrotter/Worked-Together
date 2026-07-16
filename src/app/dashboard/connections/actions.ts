@@ -95,6 +95,37 @@ export async function cancelConnectionRequest(requestId: string) {
   revalidatePath("/dashboard");
 }
 
+// Removes an already-accepted connection between two real accounts (either
+// side can do this). Placeholder connections have their own dedicated
+// deletePlaceholderConnection below, since that also has to clean up the
+// placeholder profile row itself, not just the connection between it and
+// its owner.
+export async function removeConnection(requestId: string) {
+  const me = await getOwnProfile();
+  if (!me) throw new Error("Profile not found.");
+
+  const supabase = await createClient();
+  const { data: request, error: fetchError } = await supabase
+    .from("connection_requests")
+    .select("id, requester_id, recipient_id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (
+    !request ||
+    request.status !== "accepted" ||
+    (request.requester_id !== me.id && request.recipient_id !== me.id)
+  ) {
+    throw new Error("That connection can't be removed.");
+  }
+
+  await supabase.from("connection_notes").delete().eq("connection_request_id", requestId);
+  const { error } = await supabase.from("connection_requests").delete().eq("id", requestId);
+  if (error) throw error;
+
+  revalidatePath("/dashboard");
+}
+
 export async function respondToRequest(requestId: string, accept: boolean) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -106,10 +137,7 @@ export async function respondToRequest(requestId: string, accept: boolean) {
   revalidatePath("/dashboard");
 }
 
-export async function saveConnectionNote(formData: FormData): Promise<void> {
-  const requestId = formData.get("requestId") as string;
-  const note = (formData.get("note") as string) ?? "";
-
+export async function saveConnectionNote(requestId: string, note: string): Promise<void> {
   const me = await getOwnProfile();
   if (!me) throw new Error("Profile not found.");
 

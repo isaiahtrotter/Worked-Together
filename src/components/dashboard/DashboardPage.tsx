@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { signOut, updateWidgetSettings } from "@/app/dashboard/actions";
 import type { DirectoryEntry, Profile, WidgetSettings, WorkSample } from "@/lib/dal";
 import { DEFAULT_SETTINGS } from "./widgetStyleShared";
@@ -9,6 +9,7 @@ import ProfileSection from "./ProfileSection";
 import WorkSamplesSection from "./WorkSamplesSection";
 import ConnectionsSection from "./ConnectionsSection";
 import YourNetworkSection from "./YourNetworkSection";
+import { ToastProvider } from "./ToastProvider";
 import styles from "./dashboard-page.module.css";
 import widgetUiStyles from "./widget-ui.module.css";
 
@@ -40,15 +41,43 @@ export default function DashboardPage({
   // those fields undefined and crashes the controls below.
   const settings: WidgetSettings = { ...DEFAULT_SETTINGS, ...profile.widget_settings };
 
-  // The inline preview (radius/shadow/theme) isn't editable right now — it's
-  // hidden for now. This just carries the persisted values through so
-  // nothing gets clobbered if editing comes back later.
   const [label, setLabel] = useState(settings.label);
+
+  // The widget's own theme toggle (inside the live preview below) calls
+  // onSaveTheme whenever it's clicked from the dashboard, making that the
+  // new saved default for the embed everywhere it's shown -- unlike a real
+  // embed's viewer toggling their own view, which never persists.
+  //
+  // settingsRef always holds the latest known settings so a save never
+  // clobbers a different field saved moments earlier: NetworkWidget only
+  // ever wires up onThemeChange once (it loads its script and initializes
+  // on mount, guarded against re-running), so the closure it captures has
+  // to read live state via a ref rather than a plain render-scoped variable
+  // if it's going to see a label change that happened after that mount.
+  const settingsRef = useRef(settings);
+
+  const saveSettings = useCallback(async (patch: Partial<WidgetSettings>) => {
+    const next = { ...settingsRef.current, ...patch };
+    settingsRef.current = next;
+    await updateWidgetSettings(next);
+  }, []);
 
   async function handleSaveLabel(newLabel: string) {
     setLabel(newLabel);
-    await updateWidgetSettings({ ...settings, label: newLabel });
+    await saveSettings({ label: newLabel });
   }
+
+  // Stable identity matters here specifically: this gets threaded down into
+  // NetworkWidget, which is memoized precisely so unrelated re-renders (e.g.
+  // a toast popping up) don't reapply its dangerouslySetInnerHTML and wipe
+  // out the live D3 widget. A new function reference on every render would
+  // defeat that memoization.
+  const handleSaveTheme = useCallback(
+    async (newTheme: "light" | "dark") => {
+      await saveSettings({ theme: newTheme });
+    },
+    [saveSettings],
+  );
 
   // Who's actually in the network right now — changes whenever a connection
   // is added, removed, or merged, regardless of order, so the live preview
@@ -60,56 +89,60 @@ export default function DashboardPage({
     .join(",");
 
   return (
-    <div className={styles.pageShell}>
-      <header className={styles.header}>
-        <div className={styles.headerBrand}>
-          <span className={styles.brandIcon}>W</span>
-          <span className={styles.brandText}>Worked Together</span>
+    <ToastProvider>
+      <div className={styles.pageShell}>
+        <header className={styles.header}>
+          <div className={styles.headerBrand}>
+            <span className={styles.brandIcon}>L</span>
+            <span className={styles.brandText}>Linkenode</span>
+          </div>
+          <form action={signOut}>
+            <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </form>
+        </header>
+
+        <div className={styles.layout}>
+          <main className={styles.main}>
+            <section className={styles.section}>
+              <p className={styles.sectionTitle}>Profile</p>
+              <div className={widgetUiStyles.mainCol}>
+                <ProfileSection profile={profile} />
+              </div>
+            </section>
+
+            <section className={styles.section}>
+              <p className={styles.sectionTitle}>Connections</p>
+              <div className={widgetUiStyles.mainCol}>
+                <ConnectionsSection incoming={connections.incoming} outgoing={connections.outgoing} />
+                <YourNetworkSection accepted={connections.accepted} />
+              </div>
+            </section>
+
+            <section className={styles.section}>
+              <p className={styles.sectionTitle}>Work samples</p>
+              <div className={widgetUiStyles.mainCol}>
+                <WorkSamplesSection profileId={profile.id} workSamples={workSamples} />
+              </div>
+            </section>
+          </main>
+
+          <aside className={styles.embedSide}>
+            <WidgetPreviewFrame
+              embedKey={profile.embed_key}
+              networkVersion={networkVersion}
+              label={label}
+              onSaveLabel={handleSaveLabel}
+              onSaveTheme={handleSaveTheme}
+            />
+          </aside>
         </div>
-        <form action={signOut}>
-          <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
-        </form>
-      </header>
-
-      <main className={styles.main}>
-        <section className={styles.section}>
-          <p className={styles.sectionTitle}>Profile</p>
-          <div className={widgetUiStyles.mainCol}>
-            <ProfileSection profile={profile} />
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <p className={styles.sectionTitle}>Connections</p>
-          <div className={widgetUiStyles.mainCol}>
-            <ConnectionsSection incoming={connections.incoming} outgoing={connections.outgoing} />
-            <YourNetworkSection accepted={connections.accepted} />
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <p className={styles.sectionTitle}>Work samples</p>
-          <div className={widgetUiStyles.mainCol}>
-            <WorkSamplesSection profileId={profile.id} workSamples={workSamples} />
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <p className={styles.sectionTitle}>Embed</p>
-          <WidgetPreviewFrame
-            embedKey={profile.embed_key}
-            networkVersion={networkVersion}
-            label={label}
-            onSaveLabel={handleSaveLabel}
-          />
-        </section>
-      </main>
-    </div>
+      </div>
+    </ToastProvider>
   );
 }

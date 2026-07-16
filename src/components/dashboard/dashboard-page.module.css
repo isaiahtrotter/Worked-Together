@@ -9,11 +9,38 @@
 
 .header {
   width: 100%;
-  max-width: 640px;
+  max-width: 1040px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 48px;
+}
+
+.layout {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.embedSide {
+  flex: 0 0 340px;
+  min-width: 0;
+  position: sticky;
+  top: 20px;
+}
+
+@media (max-width: 880px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .embedSide {
+    position: static;
+    width: 100%;
+    max-width: 640px;
+  }
 }
 
 .headerBrand {
@@ -63,7 +90,8 @@
 }
 
 .main {
-  width: 100%;
+  flex: 1 1 560px;
+  min-width: 0;
   max-width: 640px;
   display: flex;
   flex-direction: column;

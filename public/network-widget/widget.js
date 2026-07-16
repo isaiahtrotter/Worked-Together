@@ -1462,6 +1462,12 @@
           .addEventListener("click", function (e) {
             e.stopPropagation();
             applyTheme(currentTheme === "light" ? "dark" : "light");
+            // Only ever provided by the dashboard's own live preview (see
+            // NetworkWidget.tsx) -- a real embed's viewer toggling their own
+            // view should never change the portfolio owner's saved default.
+            if (typeof options.onThemeChange === "function") {
+              options.onThemeChange(currentTheme);
+            }
           });
 
         /* bounded scroll-wheel zoom, anchored to the canvas center */
@@ -1512,8 +1518,8 @@
         // Lets any element anywhere on the host page open the widget, e.g.
         // <a data-network-widget-open>View my network</a> (wired up
         // automatically by public/widget.js), or custom code via
-        // document.dispatchEvent(new CustomEvent("worked-together:open")).
-        document.addEventListener("worked-together:open", expandWidget);
+        // document.dispatchEvent(new CustomEvent("linkenode:open")).
+        document.addEventListener("linkenode:open", expandWidget);
 
         launcherBtn.addEventListener("pointerup", function (e) {
           e.stopPropagation();

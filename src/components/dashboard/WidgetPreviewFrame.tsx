@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import NetworkWidget from "@/components/NetworkWidget";
 import { BUTTON_LABEL_MAX_LENGTH, LauncherIcon } from "./widgetStyleShared";
+import { useToast } from "./ToastProvider";
 import styles from "./widget-ui.module.css";
 
 type Corner = "bottom-right" | "bottom-left";
@@ -17,6 +18,7 @@ export default function WidgetPreviewFrame({
   networkVersion,
   label,
   onSaveLabel,
+  onSaveTheme,
 }: {
   embedKey: string;
   // Changes whenever who's in the network changes (add/remove/merge) —
@@ -26,7 +28,10 @@ export default function WidgetPreviewFrame({
   networkVersion: string;
   label: string;
   onSaveLabel: (label: string) => Promise<void>;
+  onSaveTheme: (theme: "light" | "dark") => Promise<void>;
 }) {
+  const toast = useToast();
+
   // Inline embed mode is hidden for now (floating is the only option exposed
   // here) — the widget engine itself still fully supports data-mode="inline"
   // via a hand-written script tag, this just isn't surfaced in the snippet
@@ -37,7 +42,6 @@ export default function WidgetPreviewFrame({
   useEffect(() => setOrigin(window.location.origin), []);
 
   const [labelDraft, setLabelDraft] = useState(label);
-  const [labelSaveState, setLabelSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   useEffect(() => setLabelDraft(label), [label]);
 
   const attrs = [`data-embed-key="${embedKey}"`];
@@ -53,20 +57,39 @@ export default function WidgetPreviewFrame({
   async function saveLabel() {
     const trimmed = labelDraft.trim();
     if (!trimmed || trimmed === label) return;
-    setLabelSaveState("saving");
     try {
       await onSaveLabel(trimmed);
-      setLabelSaveState("saved");
-      setTimeout(() => setLabelSaveState("idle"), 1500);
+      toast("Saved");
     } catch {
-      setLabelSaveState("error");
+      toast("Couldn't save — try again");
     }
   }
+
+  // Stable identity: this is threaded into the memoized NetworkWidget below,
+  // which only re-renders (and wipes its live D3 state) when a prop's
+  // identity actually changes -- a fresh closure every render would trigger
+  // that on every keystroke in the fields on this page.
+  const handleThemeChange = useCallback(
+    async (theme: "light" | "dark") => {
+      try {
+        await onSaveTheme(theme);
+        toast("Saved");
+      } catch {
+        toast("Couldn't save — try again");
+      }
+    },
+    [onSaveTheme, toast],
+  );
 
   return (
     <div className={styles.mainCol}>
       <div className={styles.previewCard}>
-        <NetworkWidget key={networkVersion} embedKey={embedKey} mode="inline" />
+        <NetworkWidget
+          key={networkVersion}
+          embedKey={embedKey}
+          mode="inline"
+          onThemeChange={handleThemeChange}
+        />
       </div>
 
       <div className={styles.buttonPreviewWrap}>
@@ -74,12 +97,8 @@ export default function WidgetPreviewFrame({
           <LauncherIcon />
           <span className={styles.buttonMimicLabel}>{labelDraft || label}</span>
         </div>
-      </div>
 
-      <div className={styles.card}>
-        <p className={styles.cardLabel}>Embed on your site</p>
-
-        <div className={styles.fieldRow}>
+        <div className={styles.fieldRow} style={{ marginTop: 16, marginBottom: 0 }}>
           <span className={styles.label}>Button text</span>
           <div className={styles.inputWithCounter}>
             <input
@@ -94,8 +113,10 @@ export default function WidgetPreviewFrame({
             </span>
           </div>
         </div>
-        {labelSaveState === "saved" && <p className={styles.hint}>Saved.</p>}
-        {labelSaveState === "error" && <p className={styles.error}>Couldn&apos;t save — try again.</p>}
+      </div>
+
+      <div className={styles.card}>
+        <p className={styles.cardLabel}>Embed on your site</p>
 
         <div className={styles.fieldRow} style={{ flex: "0 0 160px" }}>
           <span className={styles.label}>Corner</span>

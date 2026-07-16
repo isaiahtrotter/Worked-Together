@@ -51,6 +51,7 @@ type WidgetOptions = {
   iconEmoji?: string;
   appOrigin?: string;
   disableCallToAction?: boolean;
+  onThemeChange?: (theme: "light" | "dark") => void;
 };
 
 declare global {
@@ -64,10 +65,12 @@ function NetworkWidget({
   embedKey,
   mode = "floating",
   onReady,
+  onThemeChange,
 }: {
   embedKey: string;
   mode?: "floating" | "inline";
   onReady?: () => void;
+  onThemeChange?: (theme: "light" | "dark") => void;
 }) {
   const initialized = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +97,7 @@ function NetworkWidget({
             // real third-party embed — clicking "Add me"/"Create your
             // network" shouldn't navigate the page you're editing away.
             disableCallToAction: true,
+            onThemeChange,
           });
           onReady?.();
         };
@@ -106,6 +110,10 @@ function NetworkWidget({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onThemeChange
+    // is only read once at mount (script.onload fires a single time, guarded
+    // by initialized.current above); re-running this effect on every
+    // identity change would re-fetch and re-inject the whole widget script.
   }, [embedKey, mode, onReady]);
 
   if (error) {

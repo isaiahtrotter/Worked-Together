@@ -241,3 +241,18 @@ create policy "owners can manage their placeholder's avatar file"
       where placeholder_owner_id = public.my_profile_id()
     )
   );
+
+-- 11. Let either side of an already-accepted connection remove it (not just
+--     the requester cancelling a still-pending one, per policy 3 above).
+--     Additive — Postgres OR's multiple policies for the same action
+--     together, so this doesn't need to touch the existing delete policy.
+create policy "either side can remove an accepted connection"
+  on public.connection_requests for delete
+  to authenticated
+  using (
+    status = 'accepted'
+    and (
+      requester_id in (select id from public.profiles where user_id = auth.uid())
+      or recipient_id in (select id from public.profiles where user_id = auth.uid())
+    )
+  );

@@ -9,9 +9,12 @@ import {
   mergeProfiles,
   dismissMergeSuggestion,
   deletePlaceholderConnection,
+  removeConnection,
   type SearchResult,
 } from "@/app/dashboard/connections/actions";
 import { MiniAvatar } from "./ConnectionsSection";
+import ConfirmDialog from "./ConfirmDialog";
+import { useToast } from "./ToastProvider";
 import styles from "./widget-ui.module.css";
 
 type OtherProfile =
@@ -33,6 +36,7 @@ const MERGE_SEARCH_DEBOUNCE_MS = 200;
 
 export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow[] }) {
   const router = useRouter();
+  const toast = useToast();
   const [acceptedState, setAcceptedState] = useState(accepted);
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -43,6 +47,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
   const [mergeResults, setMergeResults] = useState<SearchResult[]>([]);
   const [mergeSearching, setMergeSearching] = useState(false);
   const [mergeActionError, setMergeActionError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ requestId: string; name: string } | null>(null);
   const mergeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => setAcceptedState(accepted), [accepted]);
@@ -117,6 +122,19 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
       .catch(() => router.refresh());
   }
 
+  function handleConfirmRemove() {
+    if (!removeTarget) return;
+    const { requestId } = removeTarget;
+    setRemoveTarget(null);
+    setAcceptedState((prev) => prev.filter((r) => r.request.id !== requestId));
+    removeConnection(requestId)
+      .then(() => router.refresh())
+      .catch((err) => {
+        setMergeActionError(err instanceof Error ? err.message : "Couldn't remove connection.");
+        router.refresh();
+      });
+  }
+
   return (
     <div className={styles.card}>
       <p className={styles.cardLabel}>Your network</p>
@@ -160,39 +178,54 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
 
               {isOpen && (
                 <div className={styles.networkCardBody}>
-                  <form action={saveConnectionNote} className={styles.noteForm}>
-                    <input type="hidden" name="requestId" value={request.id} />
-                    <input
-                      name="note"
-                      defaultValue={note}
-                      maxLength={NOTE_MAX_LENGTH}
-                      placeholder="How do you know them? (private)"
-                      className={styles.input}
-                    />
-                    <button type="submit" className={styles.smallLinkBtn}>
-                      Save
-                    </button>
-                  </form>
+                  <input
+                    name="note"
+                    defaultValue={note}
+                    maxLength={NOTE_MAX_LENGTH}
+                    placeholder="How do you know them? (private)"
+                    className={styles.input}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      if (value === note) return;
+                      saveConnectionNote(request.id, value)
+                        .then(() => {
+                          toast("Saved");
+                          router.refresh();
+                        })
+                        .catch(() => toast("Couldn't save — try again"));
+                    }}
+                  />
                   {other && (
-                    <form
-                      action={async (formData) => {
-                        await saveEndorsement(
-                          other.id,
-                          (formData.get("endorsement") as string) ?? "",
-                        );
+                    <input
+                      name="endorsement"
+                      defaultValue={endorsement}
+                      placeholder="Write a public recommendation…"
+                      className={styles.input}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === endorsement) return;
+                        saveEndorsement(other.id, value)
+                          .then(() => {
+                            toast("Saved");
+                            router.refresh();
+                          })
+                          .catch(() => toast("Couldn't save — try again"));
                       }}
-                      className={styles.noteForm}
-                    >
-                      <input
-                        name="endorsement"
-                        defaultValue={endorsement}
-                        placeholder="Write a public recommendation…"
-                        className={styles.input}
-                      />
-                      <button type="submit" className={styles.smallLinkBtn}>
-                        Save
+                    />
+                  )}
+
+                  {!isPlaceholder && other && (
+                    <div style={{ marginTop: 4 }}>
+                      <button
+                        type="button"
+                        className={styles.smallLinkBtn}
+                        onClick={() =>
+                          setRemoveTarget({ requestId: request.id, name: other.name })
+                        }
+                      >
+                        Remove connection
                       </button>
-                    </form>
+                    </div>
                   )}
 
                   {isPlaceholder && other && (
@@ -314,6 +347,19 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title="Remove connection?"
+        message={
+          removeTarget
+            ? `${removeTarget.name} will no longer be shown in your network, and you'll no longer be shown in theirs.`
+            : ""
+        }
+        confirmLabel="Remove"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setRemoveTarget(null)}
+      />
     </div>
   );
 }
