@@ -98,20 +98,18 @@ export default function WidgetPreviewFrame({
           <span className={styles.buttonMimicLabel}>{labelDraft || label}</span>
         </div>
 
-        <div className={styles.fieldRow} style={{ marginTop: 16, marginBottom: 0 }}>
-          <span className={styles.label}>Button text</span>
-          <div className={styles.inputWithCounter}>
-            <input
-              value={labelDraft}
-              onChange={(e) => setLabelDraft(e.target.value.slice(0, BUTTON_LABEL_MAX_LENGTH))}
-              onBlur={saveLabel}
-              maxLength={BUTTON_LABEL_MAX_LENGTH}
-              className={styles.input}
-            />
-            <span className={styles.inputCounter}>
-              {labelDraft.length}/{BUTTON_LABEL_MAX_LENGTH}
-            </span>
-          </div>
+        <div className={styles.inputWithCounter}>
+          <input
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value.slice(0, BUTTON_LABEL_MAX_LENGTH))}
+            onBlur={saveLabel}
+            maxLength={BUTTON_LABEL_MAX_LENGTH}
+            placeholder="Button text"
+            className={styles.input}
+          />
+          <span className={styles.inputCounter}>
+            {labelDraft.length}/{BUTTON_LABEL_MAX_LENGTH}
+          </span>
         </div>
       </div>
 

@@ -128,11 +128,32 @@ export async function removeConnection(requestId: string) {
 
 export async function respondToRequest(requestId: string, accept: boolean) {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("connection_requests")
-    .update({ status: accept ? "accepted" : "declined" })
-    .eq("id", requestId);
-  if (error) throw error;
+
+  if (accept) {
+    // Runs as a SECURITY DEFINER function (see policies-reference.sql
+    // section 12) because accepting a request that's carrying a pending
+    // merge has to touch the placeholder owner's own rows, not just the
+    // accepting user's.
+    const { error } = await supabase.rpc("accept_connection_request", {
+      request_id: requestId,
+    });
+    if (error) {
+      // That function may not exist yet if section 12 hasn't been run
+      // against the live database -- degrade to a plain accept rather than
+      // failing outright. Any pending merge just won't finalize until then.
+      const { error: fallbackError } = await supabase
+        .from("connection_requests")
+        .update({ status: "accepted" })
+        .eq("id", requestId);
+      if (fallbackError) throw fallbackError;
+    }
+  } else {
+    const { error } = await supabase
+      .from("connection_requests")
+      .update({ status: "declined" })
+      .eq("id", requestId);
+    if (error) throw error;
+  }
 
   revalidatePath("/dashboard");
 }
@@ -283,13 +304,15 @@ export async function dismissMergeSuggestion(placeholderId: string, targetProfil
   revalidatePath("/dashboard");
 }
 
-// Merges a placeholder profile into a real one — always available, not just
-// for the auto-detected suggestion (the owner can pick any real profile).
-// Repoints the existing connection_requests row in place (rather than
-// creating a new one) so connection_notes, which key off
-// connection_request_id, keep working with no migration of their own.
-// Endorsements reference profile ids directly, so those get reassigned.
-export async function mergeProfiles(
+// "Merge" doesn't merge instantly. It sends a normal connection invitation
+// to the real account (same mechanism as sendConnectionRequest), flagged
+// with merge_placeholder_id -- only once THEY accept it does the
+// placeholder actually fold into their profile: endorsements reassigned,
+// the placeholder deleted (see finalize_placeholder_merge /
+// accept_connection_request in supabase/policies-reference.sql, section
+// 12). The one case where there's nothing to ask permission for is if the
+// two accounts are already connected for real, which finalizes right away.
+export async function inviteMergeConnection(
   placeholderId: string,
   targetProfileId: string,
 ): Promise<{ error: string | null }> {
@@ -321,50 +344,45 @@ export async function mergeProfiles(
     return { error: "That profile isn't a real account yet." };
   }
 
-  const { data: placeholderRequest, error: prError } = await supabase
+  const { data: existingReal, error: existingError } = await supabase
     .from("connection_requests")
-    .select("id")
-    .eq("requester_id", me.id)
-    .eq("recipient_id", placeholderId)
+    .select("id, status")
+    .or(
+      `and(requester_id.eq.${me.id},recipient_id.eq.${targetProfileId}),and(requester_id.eq.${targetProfileId},recipient_id.eq.${me.id})`,
+    )
     .maybeSingle();
-  if (prError) return { error: prError.message };
+  if (existingError) return { error: existingError.message };
 
-  if (placeholderRequest) {
-    const { data: existingReal } = await supabase
-      .from("connection_requests")
-      .select("id")
-      .or(
-        `and(requester_id.eq.${me.id},recipient_id.eq.${targetProfileId}),and(requester_id.eq.${targetProfileId},recipient_id.eq.${me.id})`,
-      )
-      .maybeSingle();
-
-    if (existingReal) {
-      // Already connected for real — nothing to repoint, just drop the
-      // placeholder's own connection artifacts.
-      await supabase.from("connection_notes").delete().eq("connection_request_id", placeholderRequest.id);
-      await supabase.from("connection_requests").delete().eq("id", placeholderRequest.id);
-    } else {
-      const { error: repointError } = await supabase
-        .from("connection_requests")
-        .update({ recipient_id: targetProfileId })
-        .eq("id", placeholderRequest.id);
-      if (repointError) return { error: repointError.message };
-    }
+  if (existingReal?.status === "accepted") {
+    // Already connected for real -- nothing to wait on, fold it in now.
+    const { error } = await supabase.rpc("finalize_placeholder_merge", {
+      placeholder_id: placeholderId,
+      target_id: targetProfileId,
+    });
+    if (error) return { error: error.message };
+    revalidatePath("/dashboard");
+    return { error: null };
   }
 
-  await supabase
-    .from("endorsements")
-    .update({ to_profile_id: targetProfileId })
-    .eq("to_profile_id", placeholderId);
-  // Defensive — a placeholder can never actually write an endorsement since
-  // it can't log in, but cheap to cover if that ever changes.
-  await supabase
-    .from("endorsements")
-    .update({ from_profile_id: targetProfileId })
-    .eq("from_profile_id", placeholderId);
+  if (existingReal) {
+    // A request already exists between them for some other reason -- ride
+    // along on it instead of sending a second, redundant one.
+    const { error } = await supabase
+      .from("connection_requests")
+      .update({ merge_placeholder_id: placeholderId })
+      .eq("id", existingReal.id);
+    if (error) return { error: error.message };
+    revalidatePath("/dashboard");
+    return { error: null };
+  }
 
-  const { error: deleteError } = await supabase.from("profiles").delete().eq("id", placeholderId);
-  if (deleteError) return { error: deleteError.message };
+  const { error: insertError } = await supabase.from("connection_requests").insert({
+    requester_id: me.id,
+    recipient_id: targetProfileId,
+    status: "pending",
+    merge_placeholder_id: placeholderId,
+  });
+  if (insertError) return { error: insertError.message };
 
   revalidatePath("/dashboard");
   return { error: null };

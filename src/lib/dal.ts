@@ -190,12 +190,34 @@ export const getOwnConnectionsData = cache(async () => {
         }
       }
 
+      // "Merge" sends a connection invitation rather than merging instantly
+      // (see finalize_placeholder_merge / accept_connection_request in
+      // policies-reference.sql) -- surface whichever invitation is still
+      // awaiting a response so the UI doesn't just look like Merge did
+      // nothing.
+      let pendingMergeTarget: { id: string; name: string; avatar_url: string | null } | null = null;
+      if (other && !other.user_id) {
+        const pendingInvite = (requests ?? []).find(
+          (req) =>
+            req.requester_id === myId &&
+            req.status === "pending" &&
+            req.merge_placeholder_id === other.id,
+        );
+        if (pendingInvite) {
+          const target = profileById.get(pendingInvite.recipient_id);
+          if (target) {
+            pendingMergeTarget = { id: target.id, name: target.name, avatar_url: target.avatar_url };
+          }
+        }
+      }
+
       return {
         request: r,
         other,
         note: noteByRequestId.get(r.id) ?? "",
         endorsement: endorsementByToId.get(otherId) ?? "",
         mergeSuggestion,
+        pendingMergeTarget,
       };
     });
 

@@ -921,13 +921,20 @@
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.09);
   border-radius: 12px;
-  padding: 24px;
+  padding: 16px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .buttonPreviewWrap > .buttonMimic {
-  align-self: center;
+  flex-shrink: 0;
+}
+
+.buttonPreviewWrap > .inputWithCounter {
+  flex: 1 1 100px;
+  min-width: 100px;
 }
 
 .buttonMimic {

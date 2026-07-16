@@ -133,13 +133,15 @@ export default function DashboardPage({
           </main>
 
           <aside className={styles.embedSide}>
-            <WidgetPreviewFrame
-              embedKey={profile.embed_key}
-              networkVersion={networkVersion}
-              label={label}
-              onSaveLabel={handleSaveLabel}
-              onSaveTheme={handleSaveTheme}
-            />
+            <div className={styles.embedSideSticky}>
+              <WidgetPreviewFrame
+                embedKey={profile.embed_key}
+                networkVersion={networkVersion}
+                label={label}
+                onSaveLabel={handleSaveLabel}
+                onSaveTheme={handleSaveTheme}
+              />
+            </div>
           </aside>
         </div>
       </div>

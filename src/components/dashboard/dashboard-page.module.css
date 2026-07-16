@@ -9,37 +9,51 @@
 
 .header {
   width: 100%;
-  max-width: 1040px;
+  max-width: 640px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 48px;
 }
 
+/* .main stays the same centered single column it always was (width 100%,
+   max-width 640px, margin auto) -- .layout itself spans the full page width
+   so that centering is computed the same way it was before this side
+   column existed. .embedSide then hangs off .main's right edge via an
+   absolute offset computed from that same centered midpoint, rather than
+   sharing flex space with .main (which would shift .main off-center). */
 .layout {
+  position: relative;
   width: 100%;
-  max-width: 1040px;
-  display: flex;
-  align-items: flex-start;
-  gap: 40px;
 }
 
 .embedSide {
-  flex: 0 0 340px;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: 340px; /* half of .main's 640px max-width (320) + 20px gap */
+  width: 360px;
+}
+
+.embedSideSticky {
   position: sticky;
   top: 20px;
 }
 
-@media (max-width: 880px) {
-  .layout {
-    flex-direction: column;
-  }
-
+@media (max-width: 1460px) {
   .embedSide {
     position: static;
+    left: auto;
+    margin-left: 0;
     width: 100%;
     max-width: 640px;
+    margin: 40px auto 0;
+  }
+
+  .embedSideSticky {
+    position: static;
+    top: auto;
   }
 }
 
@@ -90,9 +104,9 @@
 }
 
 .main {
-  flex: 1 1 560px;
-  min-width: 0;
+  width: 100%;
   max-width: 640px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 64px;

@@ -6,7 +6,7 @@ import {
   saveConnectionNote,
   saveEndorsement,
   searchProfilesByName,
-  mergeProfiles,
+  inviteMergeConnection,
   dismissMergeSuggestion,
   deletePlaceholderConnection,
   removeConnection,
@@ -27,6 +27,9 @@ type AcceptedRow = {
   note: string;
   endorsement: string;
   mergeSuggestion?: MergeSuggestion;
+  // Set once a merge invitation has been sent and is still awaiting a
+  // response -- see inviteMergeConnection.
+  pendingMergeTarget?: MergeSuggestion;
 };
 
 const NOTE_MAX_LENGTH = 80;
@@ -89,16 +92,22 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
     setMergeActionError(null);
   }
 
-  function handleMerge(requestId: string, placeholderId: string, targetId: string) {
+  function handleMerge(placeholderId: string, targetId: string) {
     setMergePickerForRequestId(null);
-    setAcceptedState((prev) => prev.filter((r) => r.request.id !== requestId));
-    mergeProfiles(placeholderId, targetId)
+    // Doesn't merge instantly, so the row stays put -- this just sends a
+    // connection invitation. It'll actually fold in once they accept it
+    // (or immediately if the two accounts already happen to be connected).
+    inviteMergeConnection(placeholderId, targetId)
       .then((result) => {
-        if (result.error) setMergeActionError(result.error);
+        if (result.error) {
+          setMergeActionError(result.error);
+        } else {
+          toast("Invitation sent");
+        }
         router.refresh();
       })
       .catch((err) => {
-        setMergeActionError(err instanceof Error ? err.message : "Couldn't merge.");
+        setMergeActionError(err instanceof Error ? err.message : "Couldn't send invitation.");
         router.refresh();
       });
   }
@@ -150,7 +159,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
       )}
 
       <div className={styles.networkGrid}>
-        {visible.map(({ request, other, note, endorsement, mergeSuggestion }) => {
+        {visible.map(({ request, other, note, endorsement, mergeSuggestion, pendingMergeTarget }) => {
           const isOpen = expandedId === request.id;
           const isPlaceholder = !!other && !other.user_id;
           return (
@@ -230,7 +239,13 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
 
                   {isPlaceholder && other && (
                     <div style={{ marginTop: 4 }}>
-                      {mergeSuggestion && (
+                      {pendingMergeTarget && (
+                        <p className={styles.hint} style={{ margin: "0 0 8px" }}>
+                          {`Invitation sent to ${pendingMergeTarget.name} — waiting for them to accept.`}
+                        </p>
+                      )}
+
+                      {!pendingMergeTarget && mergeSuggestion && (
                         <div className={styles.controlRow} style={{ marginBottom: 8 }}>
                           <span className={styles.hint} style={{ margin: 0 }}>
                             {`This might be ${mergeSuggestion.name} — they've since made a real account.`}
@@ -239,9 +254,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                             <button
                               type="button"
                               className={styles.btnSecondary}
-                              onClick={() =>
-                                handleMerge(request.id, other.id, mergeSuggestion.id)
-                              }
+                              onClick={() => handleMerge(other.id, mergeSuggestion.id)}
                             >
                               Merge
                             </button>
@@ -256,7 +269,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                         </div>
                       )}
 
-                      {mergePickerForRequestId === request.id ? (
+                      {!pendingMergeTarget && mergePickerForRequestId === request.id && (
                         <div className={styles.searchWrap} style={{ marginBottom: 0 }}>
                           <input
                             value={mergeQuery}
@@ -287,7 +300,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                                       type="button"
                                       className={styles.btnSecondary}
                                       onMouseDown={(e) => e.preventDefault()}
-                                      onClick={() => handleMerge(request.id, other.id, r.id)}
+                                      onClick={() => handleMerge(other.id, r.id)}
                                     >
                                       Merge
                                     </button>
@@ -304,8 +317,10 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                             Cancel
                           </button>
                         </div>
-                      ) : (
-                        <div style={{ display: "flex", gap: 12 }}>
+                      )}
+
+                      <div style={{ display: "flex", gap: 12 }}>
+                        {!pendingMergeTarget && mergePickerForRequestId !== request.id && (
                           <button
                             type="button"
                             className={styles.smallLinkBtn}
@@ -313,15 +328,16 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                           >
                             Merge into another profile…
                           </button>
-                          <button
-                            type="button"
-                            className={styles.smallLinkBtn}
-                            onClick={() => handleDeletePlaceholder(request.id, other.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
+                        )}
+                        <button
+                          type="button"
+                          className={styles.smallLinkBtn}
+                          onClick={() => handleDeletePlaceholder(request.id, other.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
                       {mergeActionError && (
                         <p className={styles.error}>{mergeActionError}</p>
                       )}
