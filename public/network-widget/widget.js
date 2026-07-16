@@ -591,31 +591,32 @@
           });
         }
 
+        // Compass order: N, E, S, W fill first (the four cardinal slots
+        // immediately around the owner), then NW, NE, SW, SE fill the
+        // corners between them, completing a ring of 8. The 9th connection
+        // onward repeats this same order one ring further out (N2, E2, S2,
+        // W2, NW2, NE2, SW2, SE2), and so on outward indefinitely.
+        var DIRECTION_PATTERN = [
+          [0, -1], // N
+          [1, 0], // E
+          [0, 1], // S
+          [-1, 0], // W
+          [-1, -1], // NW
+          [1, -1], // NE
+          [-1, 1], // SW
+          [1, 1], // SE
+        ];
         function assignGridPositions() {
           var centerCol = 2,
             centerRow = 2;
-          var ringOffsets = [
-            [0, -1],
-            [1, -1],
-            [1, 0],
-            [1, 1],
-            [0, 1],
-            [-1, 1],
-            [-1, 0],
-            [-1, -1],
-            [0, -2],
-            [2, 0],
-            [0, 2],
-            [-2, 0],
-            [2, -2],
-          ];
           var others = nodes.filter(function (n) {
             return n.id !== "you";
           });
           others.forEach(function (n, i) {
-            var off = ringOffsets[i % ringOffsets.length];
-            n.gridCol = centerCol + off[0];
-            n.gridRow = centerRow + off[1];
+            var ring = Math.floor(i / DIRECTION_PATTERN.length) + 1;
+            var dir = DIRECTION_PATTERN[i % DIRECTION_PATTERN.length];
+            n.gridCol = centerCol + dir[0] * ring;
+            n.gridRow = centerRow + dir[1] * ring;
           });
           nodes.forEach(function (n) {
             if (n.id === "you") {
