@@ -15,6 +15,7 @@ import {
 import { MiniAvatar } from "./ConnectionsSection";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
+import { updateConnectionEndorsementPreview, updateConnectionPreview } from "@/lib/widgetLiveUpdate";
 import styles from "./widget-ui.module.css";
 
 type OtherProfile =
@@ -37,7 +38,13 @@ const FILTER_THRESHOLD = 6;
 const VISIBLE_CAP = 8;
 const MERGE_SEARCH_DEBOUNCE_MS = 200;
 
-export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow[] }) {
+export default function YourNetworkSection({
+  accepted,
+  owner,
+}: {
+  accepted: AcceptedRow[];
+  owner: { id: string; name: string; avatar_url: string | null };
+}) {
   const router = useRouter();
   const toast = useToast();
   const [acceptedState, setAcceptedState] = useState(accepted);
@@ -193,6 +200,9 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                     maxLength={NOTE_MAX_LENGTH}
                     placeholder="How do you know them? (private)"
                     className={styles.input}
+                    onChange={(e) => {
+                      if (other) updateConnectionPreview(other.id, { relationship: e.target.value });
+                    }}
                     onBlur={(e) => {
                       const value = e.target.value;
                       if (value === note) return;
@@ -210,6 +220,15 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                       defaultValue={endorsement}
                       placeholder="Write a public recommendation…"
                       className={styles.input}
+                      onChange={(e) =>
+                        updateConnectionEndorsementPreview(
+                          other.id,
+                          owner.id,
+                          owner.name,
+                          owner.avatar_url,
+                          e.target.value,
+                        )
+                      }
                       onBlur={(e) => {
                         const value = e.target.value;
                         if (value === endorsement) return;

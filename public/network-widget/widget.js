@@ -1458,6 +1458,69 @@
           }
         };
 
+        // Same idea as __updateNetworkWidgetOwner above, but for a private
+        // note (person.relationship) written about one of the owner's
+        // connections rather than the owner's own profile fields.
+        window.__updateNetworkWidgetConnection = function (id, patch) {
+          var person = db[id];
+          if (!person) return;
+          Object.assign(person, patch);
+
+          var node = nodes.filter(function (n) {
+            return n.id === id;
+          })[0];
+          if (node) Object.assign(node, patch);
+
+          if (currentPanelId === id) {
+            openPanel(id);
+          }
+        };
+
+        // Endorsements upsert by fromId (matching the DB's own upsert on
+        // from/to) rather than replacing the whole list, since the
+        // dashboard only ever has the one endorsement it's currently
+        // editing on hand -- not every endorsement this person has from
+        // anyone else.
+        window.__updateNetworkWidgetConnectionEndorsement = function (
+          id,
+          fromId,
+          fromName,
+          fromAvatarUrl,
+          text,
+        ) {
+          var person = db[id];
+          if (!person) return;
+          if (!person.endorsements) person.endorsements = [];
+          var idx = -1;
+          for (var i = 0; i < person.endorsements.length; i++) {
+            if (person.endorsements[i].fromId === fromId) {
+              idx = i;
+              break;
+            }
+          }
+          var entry = {
+            id: idx >= 0 ? person.endorsements[idx].id : "local-" + fromId,
+            fromId: fromId,
+            fromName: fromName,
+            fromAvatarUrl: fromAvatarUrl,
+            text: text,
+          };
+          if (idx >= 0) {
+            person.endorsements[idx] = entry;
+          } else {
+            person.endorsements.push(entry);
+          }
+
+          var node = nodes.filter(function (n) {
+            return n.id === id;
+          })[0];
+          if (node) node.endorsements = person.endorsements;
+
+          if (currentPanelId === id) {
+            openPanel(id);
+          }
+        };
+
         document
           .getElementById("theme-toggle-btn")
           .addEventListener("click", function (e) {

@@ -119,7 +119,10 @@ export default function DashboardPage({
             <p className={styles.sectionTitle}>Connections</p>
             <div className={widgetUiStyles.mainCol}>
               <ConnectionsSection incoming={connections.incoming} outgoing={connections.outgoing} />
-              <YourNetworkSection accepted={connections.accepted} />
+              <YourNetworkSection
+                accepted={connections.accepted}
+                owner={{ id: profile.id, name: profile.name, avatar_url: profile.avatar_url }}
+              />
             </div>
           </section>
 
