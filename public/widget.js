@@ -36,6 +36,57 @@
     );
   }
 
+  // Endorsements are written from someone's own dashboard about any of
+  // their connections, so "who endorsed X" can include people who aren't
+  // connections of the widget's own owner (e.g. a mutual connection of a
+  // connection). Fetched globally by to_profile_id rather than scoped to
+  // the owner's own connection list, then joined with whatever endorser
+  // identities aren't already known from this widget's own data. Keep in
+  // sync with fetchEndorsementsByTarget in src/lib/fetchWidgetData.ts.
+  function fetchEndorsementsByTarget(nodeIds, knownProfiles) {
+    var byTarget = {};
+    if (!nodeIds.length) return Promise.resolve(byTarget);
+
+    return fetchJSON("endorsements?to_profile_id=in.(" + nodeIds.join(",") + ")&select=*").then(
+      function (rows) {
+        if (!rows.length) return byTarget;
+
+        var missingIds = [];
+        rows.forEach(function (row) {
+          if (!knownProfiles[row.from_profile_id] && missingIds.indexOf(row.from_profile_id) === -1) {
+            missingIds.push(row.from_profile_id);
+          }
+        });
+
+        var afterLookup = missingIds.length
+          ? fetchJSON("profiles?id=in.(" + missingIds.join(",") + ")&select=id,name,avatar_url").then(
+              function (extra) {
+                extra.forEach(function (p) {
+                  knownProfiles[p.id] = { name: p.name, avatar_url: p.avatar_url };
+                });
+              },
+            )
+          : Promise.resolve();
+
+        return afterLookup.then(function () {
+          rows.forEach(function (row) {
+            var info = knownProfiles[row.from_profile_id];
+            var list = byTarget[row.to_profile_id] || [];
+            list.push({
+              id: row.id,
+              fromId: row.from_profile_id,
+              fromName: info ? info.name : "Someone",
+              fromAvatarUrl: info ? info.avatar_url : null,
+              text: row.text,
+            });
+            byTarget[row.to_profile_id] = list;
+          });
+          return byTarget;
+        });
+      },
+    );
+  }
+
   function buildConnections(profile) {
     var reqFilter =
       "connection_requests?status=eq.accepted&or=(requester_id.eq." +
@@ -44,7 +95,7 @@
       profile.id +
       ")&select=*";
     return fetchJSON(reqFilter).then(function (requests) {
-      if (!requests.length) return [];
+      if (!requests.length) return { connections: [], endorsementsByTarget: {} };
       var otherIds = requests.map(function (r) {
         return r.requester_id === profile.id ? r.recipient_id : r.requester_id;
       });
@@ -54,36 +105,46 @@
       return Promise.all([
         fetchJSON("profiles?id=in.(" + idList + ")&select=*"),
         fetchJSON(
-          "endorsements?to_profile_id=eq." + profile.id + "&from_profile_id=in.(" + idList + ")&select=*",
-        ),
-        fetchJSON(
           "connection_notes?connection_request_id=in.(" + requestIds + ")&profile_id=eq." + profile.id + "&select=*",
         ),
         fetchJSON("work_samples?profile_id=in.(" + idList + ")&select=*&order=sort_order"),
       ]).then(function (results) {
         var otherProfiles = results[0];
-        var endorsements = results[1];
-        var myNotes = results[2];
-        var allWorkSamples = results[3];
-        return otherProfiles.map(function (other) {
-          var req = requests.find(function (r) {
-            return r.requester_id === other.id || r.recipient_id === other.id;
-          });
-          var end = endorsements.find(function (e) { return e.from_profile_id === other.id; });
-          var myNote = req ? myNotes.find(function (n) { return n.connection_request_id === req.id; }) : null;
-          var samples = allWorkSamples.filter(function (w) { return w.profile_id === other.id; });
-          return {
-            id: other.id,
-            name: other.name,
-            role: "connection",
-            bio: other.bio,
-            website: other.website,
-            avatar_url: other.avatar_url,
-            relationship: myNote ? myNote.note : "",
-            endorsement: end ? end.text : "",
-            workSamples: samples,
-          };
+        var myNotes = results[1];
+        var allWorkSamples = results[2];
+
+        var knownProfiles = {};
+        knownProfiles[profile.id] = { name: profile.name, avatar_url: profile.avatar_url };
+        otherProfiles.forEach(function (p) {
+          knownProfiles[p.id] = { name: p.name, avatar_url: p.avatar_url };
         });
+
+        return fetchEndorsementsByTarget([profile.id].concat(otherIds), knownProfiles).then(
+          function (endorsementsByTarget) {
+            var connections = otherProfiles.map(function (other) {
+              var req = requests.find(function (r) {
+                return r.requester_id === other.id || r.recipient_id === other.id;
+              });
+              var myNote = req ? myNotes.find(function (n) { return n.connection_request_id === req.id; }) : null;
+              var samples = allWorkSamples.filter(function (w) { return w.profile_id === other.id; });
+              var ownerEndorsers = endorsementsByTarget[profile.id] || [];
+              var endorsesOwner = ownerEndorsers.some(function (e) { return e.fromId === other.id; });
+              return {
+                id: other.id,
+                name: other.name,
+                role: "connection",
+                bio: other.bio,
+                website: other.website,
+                avatar_url: other.avatar_url,
+                relationship: myNote ? myNote.note : "",
+                endorsements: endorsementsByTarget[other.id] || [],
+                endorsesOwner: endorsesOwner,
+                workSamples: samples,
+              };
+            });
+            return { connections: connections, endorsementsByTarget: endorsementsByTarget };
+          },
+        );
       });
     });
   }
@@ -95,8 +156,10 @@
         var profile = profiles[0];
         return Promise.all([buildConnections(profile), fetchWorkSamples(profile.id)]).then(
           function (results) {
+            var built = results[0];
             profile.workSamples = results[1];
-            return { profile: profile, connections: results[0] };
+            profile.endorsements = built.endorsementsByTarget[profile.id] || [];
+            return { profile: profile, connections: built.connections };
           },
         );
       },

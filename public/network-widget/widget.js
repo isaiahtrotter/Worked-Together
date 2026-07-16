@@ -85,7 +85,13 @@
           if (shareNetworkBtnEl) shareNetworkBtnEl.addEventListener("click", function (e) { e.preventDefault(); });
         } else {
           if (addOwnerBtnEl) addOwnerBtnEl.href = loginUrl;
-          if (shareNetworkBtnEl) shareNetworkBtnEl.href = loginUrl;
+          if (shareNetworkBtnEl) {
+            // Always the marketing site, regardless of which app instance
+            // this embed points at -- not "loginUrl" (that's for "Add me").
+            shareNetworkBtnEl.href = "https://linkenode.com";
+            shareNetworkBtnEl.target = "_blank";
+            shareNetworkBtnEl.rel = "noopener noreferrer";
+          }
         }
 
         var width = container.clientWidth || 460,
@@ -152,6 +158,7 @@
             bio: c.bio,
             website: c.website,
             endorsements: c.endorsements || [],
+            endorsesOwner: !!c.endorsesOwner,
             relationship: c.relationship || null,
             avatarOverride: c.avatar_url || null,
             workSamples: c.workSamples || [],
@@ -254,6 +261,17 @@
               encodeURIComponent(seed) +
               "&size=128"
           );
+        }
+        // Real profiles store website without a protocol (e.g. "site.com");
+        // placeholder profiles store the exact link that was pasted in,
+        // protocol included (e.g. "https://x.com/handle"). Blindly
+        // prepending "https://" broke placeholder links (producing
+        // "https://https://..."), so check first.
+        function websiteHref(website) {
+          return /^https?:\/\//i.test(website) ? website : "https://" + website;
+        }
+        function websiteDisplay(website) {
+          return website.replace(/^https?:\/\//i, "");
         }
         function easeOutBack(t) {
           var c1 = 1.70158,
@@ -827,8 +845,16 @@
 
           var badgeEnter = enter
             .filter(function (d) {
-              var endorsements = db[d.id].endorsements;
-              return !!(endorsements && endorsements.length > 0);
+              // Same rule as the hover card: the star means "this person
+              // endorsed the portfolio owner" for a connection, or "someone
+              // endorsed me" for the owner's own node -- never "this person
+              // has been endorsed by anyone," which would also light up for
+              // an endorsement the owner wrote about a connection.
+              if (d.id === "you") {
+                var endorsements = db.you.endorsements;
+                return !!(endorsements && endorsements.length > 0);
+              }
+              return !!db[d.id].endorsesOwner;
             })
             .append("g")
             .attr("class", "endorse-badge")
@@ -930,18 +956,30 @@
               '<span style="' +
               linkTextStyle +
               '">' +
-              d.website +
+              websiteDisplay(d.website) +
               "</span></div>";
-          var endorsementCount = (d.endorsements || []).length;
-          if (endorsementCount > 0)
+          // The star only ever means "this person endorsed the portfolio
+          // owner" -- an owner-authored endorsement of a connection (the
+          // reverse direction) intentionally shows nothing here.
+          if (d.id === "you") {
+            var endorserCount = (d.endorsements || []).length;
+            if (endorserCount > 0)
+              rows +=
+                '<div class="wm-label" style="display:flex;align-items:center;gap:6px;color:#8A6100;margin-top:10px;">' +
+                starIcon(12) +
+                "<span>" +
+                endorserCount +
+                " endorsement" +
+                (endorserCount === 1 ? "" : "s") +
+                "</span></div>";
+          } else if (d.endorsesOwner) {
             rows +=
               '<div class="wm-label" style="display:flex;align-items:center;gap:6px;color:#8A6100;margin-top:10px;">' +
               starIcon(12) +
-              "<span>" +
-              endorsementCount +
-              " endorsement" +
-              (endorsementCount === 1 ? "" : "s") +
+              "<span>Endorses " +
+              db.you.name +
               "</span></div>";
+          }
 
           hoverCard.style.background = t.panelBg;
           hoverCard.style.border = "none";
@@ -1236,13 +1274,13 @@
           var linkRows = "";
           if (person.website)
             linkRows +=
-              '<a href="https://' +
-              person.website +
-              '" target="_blank" class="profile-link" style="display:flex;align-items:center;gap:8px;padding:8px 6px;color:' +
+              '<a href="' +
+              websiteHref(person.website) +
+              '" target="_blank" rel="noopener noreferrer" class="profile-link" style="display:flex;align-items:center;gap:8px;padding:8px 6px;color:' +
               t.textPrimary +
               ';text-decoration:none;font-size:13px;">' +
               icon("external", 16) +
-              person.website +
+              websiteDisplay(person.website) +
               "</a>";
 
           var tileStyle =

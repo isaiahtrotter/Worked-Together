@@ -8,7 +8,6 @@ import styles from "./widget-ui.module.css";
 
 export default function AddPlaceholderConnection() {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
   const [link, setLink] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,50 +26,24 @@ export default function AddPlaceholderConnection() {
     }
 
     setLink("");
-    setIsOpen(false);
     router.refresh();
   }
 
-  if (!isOpen) {
-    return (
-      <button
-        type="button"
-        className={styles.smallLinkBtn}
-        onClick={() => setIsOpen(true)}
-        style={{ marginBottom: 14, display: "block" }}
-      >
-        Add someone without an account
-      </button>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
-      <div className={styles.fieldRowGroup}>
-        <div className={styles.fieldRow} style={{ flex: "1 1 100%" }}>
-          <span className={styles.label}>Link to their work</span>
-          <input
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="Twitter, Behance, Dribbble, anything"
-            className={styles.input}
-            required
-          />
-        </div>
+    <form onSubmit={handleSubmit}>
+      <div className={styles.fieldRow}>
+        <span className={styles.label}>Link to their work</span>
+        <input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="Twitter, Behance, Dribbble, anything"
+          className={styles.input}
+          required
+        />
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <button type="submit" className={styles.btnSecondary} disabled={submitting}>
-          {submitting ? "Adding…" : "Add"}
-        </button>
-        <button
-          type="button"
-          className={styles.smallLinkBtn}
-          onClick={() => setIsOpen(false)}
-          disabled={submitting}
-        >
-          Cancel
-        </button>
-      </div>
+      <button type="submit" className={styles.btnSecondary} disabled={submitting}>
+        {submitting ? "Adding…" : "Add"}
+      </button>
       {error && <p className={styles.error}>{error}</p>}
       <p className={styles.hint}>
         We&apos;ll try to pull their name and photo from the link automatically.

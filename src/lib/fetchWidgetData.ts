@@ -118,6 +118,13 @@ async function buildConnections(profile: { id: string; name: string; avatar_url:
     const samples = allWorkSamples.filter(
       (w: { profile_id: string }) => w.profile_id === other.id,
     );
+    // Narrower than "endorsements" above -- specifically "did this
+    // connection endorse the owner," which is what the star badge on the
+    // graph and the hover card mean. An owner-authored endorsement of this
+    // connection (the reverse direction) doesn't count here.
+    const endorsesOwner = (endorsementsByTarget.get(profile.id) ?? []).some(
+      (e) => e.fromId === other.id,
+    );
     return {
       id: other.id,
       name: other.name,
@@ -127,6 +134,7 @@ async function buildConnections(profile: { id: string; name: string; avatar_url:
       avatar_url: other.avatar_url,
       relationship: myNote ? myNote.note : "",
       endorsements: endorsementsByTarget.get(other.id) ?? [],
+      endorsesOwner,
       workSamples: samples,
     };
   });

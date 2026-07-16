@@ -28,6 +28,7 @@ type AcceptedRow = {
 
 const NOTE_MAX_LENGTH = 80;
 const FILTER_THRESHOLD = 6;
+const VISIBLE_CAP = 8;
 const MERGE_SEARCH_DEBOUNCE_MS = 200;
 
 export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow[] }) {
@@ -35,6 +36,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
   const [acceptedState, setAcceptedState] = useState(accepted);
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const [mergePickerForRequestId, setMergePickerForRequestId] = useState<string | null>(null);
   const [mergeQuery, setMergeQuery] = useState("");
@@ -71,6 +73,9 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
       (row.other?.name ?? "").toLowerCase().includes(trimmed),
     );
   }, [acceptedState, query]);
+
+  const visible = showAll ? filtered : filtered.slice(0, VISIBLE_CAP);
+  const hiddenCount = filtered.length - visible.length;
 
   function openMergePicker(requestId: string) {
     setMergePickerForRequestId(requestId);
@@ -126,15 +131,15 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
         />
       )}
 
-      <ul className={styles.networkList}>
-        {filtered.map(({ request, other, note, endorsement, mergeSuggestion }) => {
+      <div className={styles.networkGrid}>
+        {visible.map(({ request, other, note, endorsement, mergeSuggestion }) => {
           const isOpen = expandedId === request.id;
           const isPlaceholder = !!other && !other.user_id;
           return (
-            <li key={request.id} className={styles.networkRow}>
+            <div key={request.id} className={styles.networkCard}>
               <button
                 type="button"
-                className={styles.networkRowHeader}
+                className={styles.networkCardHeader}
                 onClick={() => setExpandedId(isOpen ? null : request.id)}
               >
                 <span className={styles.searchDropdownIdentity}>
@@ -154,7 +159,7 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
               </button>
 
               {isOpen && (
-                <div className={styles.networkRowBody}>
+                <div className={styles.networkCardBody}>
                   <form action={saveConnectionNote} className={styles.noteForm}>
                     <input type="hidden" name="requestId" value={request.id} />
                     <input
@@ -291,15 +296,24 @@ export default function YourNetworkSection({ accepted }: { accepted: AcceptedRow
                   )}
                 </div>
               )}
-            </li>
+            </div>
           );
         })}
-        {filtered.length === 0 && (
-          <li className={styles.emptyState}>
-            {acceptedState.length === 0 ? "No connections yet." : "No matches."}
-          </li>
-        )}
-      </ul>
+      </div>
+
+      {filtered.length === 0 && (
+        <p className={styles.emptyState}>
+          {acceptedState.length === 0 ? "No connections yet." : "No matches."}
+        </p>
+      )}
+
+      {hiddenCount > 0 && (
+        <div className={styles.networkShowMoreRow}>
+          <button type="button" className={styles.smallLinkBtn} onClick={() => setShowAll(true)}>
+            Show {hiddenCount} more
+          </button>
+        </div>
+      )}
     </div>
   );
 }

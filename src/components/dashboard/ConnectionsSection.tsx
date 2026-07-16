@@ -113,134 +113,139 @@ export default function ConnectionsSection({
   }
 
   return (
-    <div className={styles.card}>
-      <p className={styles.cardLabel}>Connections</p>
+    <div className={styles.twoCardRow}>
+      <div className={styles.card}>
+        <p className={styles.cardLabel}>Add without an account</p>
+        <AddPlaceholderConnection />
+      </div>
 
-      <AddPlaceholderConnection />
+      <div className={styles.card}>
+        <p className={styles.cardLabel}>Add an existing account</p>
 
-      <div className={styles.searchWrap}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-          placeholder="Search by name"
-          className={styles.input}
-        />
-        {isOpen && query.trim() && (
-          <div className={styles.searchDropdown}>
-            {isSearching && <div className={styles.searchDropdownItem}>Searching…</div>}
-            {!isSearching && searchError && (
-              <div className={styles.searchDropdownItem}>{searchError}</div>
-            )}
-            {!isSearching && !searchError && results.length === 0 && (
-              <div className={styles.searchDropdownItem}>No matches.</div>
-            )}
-            {!isSearching &&
-              results.map((r, index) => (
-                <div
-                  key={r.id}
-                  className={styles.searchDropdownItem}
-                  style={{ animationDelay: `${Math.min(index, 6) * 25}ms` }}
-                >
+        <div className={styles.searchWrap}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+            placeholder="Search by name"
+            className={styles.input}
+          />
+          {isOpen && query.trim() && (
+            <div className={styles.searchDropdown}>
+              {isSearching && <div className={styles.searchDropdownItem}>Searching…</div>}
+              {!isSearching && searchError && (
+                <div className={styles.searchDropdownItem}>{searchError}</div>
+              )}
+              {!isSearching && !searchError && results.length === 0 && (
+                <div className={styles.searchDropdownItem}>No matches.</div>
+              )}
+              {!isSearching &&
+                results.map((r, index) => (
+                  <div
+                    key={r.id}
+                    className={styles.searchDropdownItem}
+                    style={{ animationDelay: `${Math.min(index, 6) * 25}ms` }}
+                  >
+                    <span className={styles.searchDropdownIdentity}>
+                      <MiniAvatar url={r.avatar_url} name={r.name} />
+                      <span>{r.name}</span>
+                    </span>
+                    {r.status === "not_connected" && (
+                      <button
+                        type="button"
+                        className={styles.btnSecondary}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSendRequest(r.id)}
+                      >
+                        Send request
+                      </button>
+                    )}
+                    {r.status === "pending_outgoing" && (
+                      <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
+                    )}
+                    {r.status === "pending_incoming" && (
+                      <span className={`${styles.badge} ${styles.badgeIncoming}`}>
+                        Wants to connect
+                      </span>
+                    )}
+                    {r.status === "connected" && (
+                      <span className={`${styles.badge} ${styles.badgeConnected}`}>Connected</span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {actionError && <p className={styles.error}>{actionError}</p>}
+
+        {incomingState.length > 0 && (
+          <>
+            <p className={styles.cardLabel} style={{ marginTop: 20 }}>
+              Incoming requests
+            </p>
+            <ul className={styles.list}>
+              {incomingState.map(({ request, other }) => (
+                <li key={request.id} className={styles.row}>
                   <span className={styles.searchDropdownIdentity}>
-                    <MiniAvatar url={r.avatar_url} name={r.name} />
-                    <span>{r.name}</span>
+                    <MiniAvatar url={other?.avatar_url} name={other?.name ?? "?"} />
+                    <span>{other?.name ?? "Unknown"}</span>
                   </span>
-                  {r.status === "not_connected" && (
+                  <div className={styles.rowActions}>
                     <button
                       type="button"
                       className={styles.btnSecondary}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleSendRequest(r.id)}
+                      onClick={() => handleAccept(request.id)}
                     >
-                      Send request
+                      Accept
                     </button>
-                  )}
-                  {r.status === "pending_outgoing" && (
-                    <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
-                  )}
-                  {r.status === "pending_incoming" && (
-                    <span className={`${styles.badge} ${styles.badgeIncoming}`}>
-                      Wants to connect
-                    </span>
-                  )}
-                  {r.status === "connected" && (
-                    <span className={`${styles.badge} ${styles.badgeConnected}`}>Connected</span>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      className={styles.smallLinkBtn}
+                      onClick={() => handleDecline(request.id)}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </li>
               ))}
-          </div>
+            </ul>
+          </>
+        )}
+
+        {outgoingState.length > 0 && (
+          <>
+            <p className={styles.cardLabel} style={{ marginTop: 20 }}>
+              Outgoing requests
+            </p>
+            <ul className={styles.list}>
+              {outgoingState.map(({ request, other }) => (
+                <li key={request.id} className={styles.row}>
+                  <span className={styles.searchDropdownIdentity}>
+                    <MiniAvatar url={other?.avatar_url} name={other?.name ?? "?"} />
+                    <span>{other?.name ?? "Unknown"}</span>
+                  </span>
+                  <div className={styles.rowActions}>
+                    <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
+                    <button
+                      type="button"
+                      className={styles.smallLinkBtn}
+                      onClick={() => handleCancel(request.id)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {incomingState.length === 0 && outgoingState.length === 0 && (
+          <p className={styles.emptyState}>No pending requests.</p>
         )}
       </div>
-
-      {actionError && <p className={styles.error}>{actionError}</p>}
-
-      {incomingState.length > 0 && (
-        <>
-          <p className={styles.cardLabel} style={{ marginTop: 20 }}>
-            Incoming requests
-          </p>
-          <ul className={styles.list}>
-            {incomingState.map(({ request, other }) => (
-              <li key={request.id} className={styles.row}>
-                <span className={styles.searchDropdownIdentity}>
-                  <MiniAvatar url={other?.avatar_url} name={other?.name ?? "?"} />
-                  <span>{other?.name ?? "Unknown"}</span>
-                </span>
-                <div className={styles.rowActions}>
-                  <button
-                    type="button"
-                    className={styles.btnSecondary}
-                    onClick={() => handleAccept(request.id)}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.smallLinkBtn}
-                    onClick={() => handleDecline(request.id)}
-                  >
-                    Decline
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {outgoingState.length > 0 && (
-        <>
-          <p className={styles.cardLabel} style={{ marginTop: 20 }}>
-            Outgoing requests
-          </p>
-          <ul className={styles.list}>
-            {outgoingState.map(({ request, other }) => (
-              <li key={request.id} className={styles.row}>
-                <span className={styles.searchDropdownIdentity}>
-                  <MiniAvatar url={other?.avatar_url} name={other?.name ?? "?"} />
-                  <span>{other?.name ?? "Unknown"}</span>
-                </span>
-                <div className={styles.rowActions}>
-                  <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
-                  <button
-                    type="button"
-                    className={styles.smallLinkBtn}
-                    onClick={() => handleCancel(request.id)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {incomingState.length === 0 && outgoingState.length === 0 && (
-        <p className={styles.emptyState}>No pending requests.</p>
-      )}
     </div>
   );
 }
