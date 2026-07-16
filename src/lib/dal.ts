@@ -17,23 +17,11 @@ export const requireSessionUser = cache(async () => {
   return user;
 });
 
-export type ButtonHoverStyle = "scale" | "lift" | "glow" | "darken" | "none";
-
 export type WidgetSettings = {
   theme: "light" | "dark";
   cornerRadius: number;
   shadow: number; // 0-100 intensity
-  buttonFontSize: number; // px
-  buttonFontWeight: number; // 400-700
-  buttonLetterSpacing: number; // px
-  buttonPaddingX: number; // px, applied symmetrically left/right
-  buttonPaddingY: number; // px
-  buttonBorderColor: string; // hex
-  buttonBorderWidth: number; // px
-  buttonBorderRadius: number; // px
-  buttonBackgroundColor: string; // hex
-  buttonHoverStyle: ButtonHoverStyle;
-  buttonFontFamily: string; // FONT_OPTIONS id, see EmbedDesigner.tsx
+  label: string; // launcher button text, capped at BUTTON_LABEL_MAX_LENGTH
 };
 
 export type Profile = {

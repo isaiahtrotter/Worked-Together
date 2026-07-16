@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CSSProperties } from "react";
 import NetworkWidget from "@/components/NetworkWidget";
-import type { ButtonHoverStyle } from "@/lib/dal";
-import { FONT_BY_ID, FONT_OPTIONS, HOVER_STYLE_CLASS, LauncherIcon } from "./widgetStyleShared";
+import { BUTTON_LABEL_MAX_LENGTH, LauncherIcon } from "./widgetStyleShared";
 import styles from "./widget-ui.module.css";
-
-const DEFAULT_LABEL = "View My Network";
 
 type Corner = "bottom-right" | "bottom-left";
 
@@ -16,24 +12,11 @@ const CORNERS: { value: Corner; label: string }[] = [
   { value: "bottom-left", label: "Bottom left" },
 ];
 
-export type ButtonStyleValues = {
-  buttonFontFamily: string;
-  buttonFontSize: number;
-  buttonFontWeight: number;
-  buttonLetterSpacing: number;
-  buttonPaddingX: number;
-  buttonPaddingY: number;
-  buttonBorderColor: string;
-  buttonBorderWidth: number;
-  buttonBorderRadius: number;
-  buttonBackgroundColor: string;
-  buttonHoverStyle: ButtonHoverStyle;
-};
-
 export default function WidgetPreviewFrame({
   embedKey,
   networkVersion,
-  buttonStyle,
+  label,
+  onSaveLabel,
 }: {
   embedKey: string;
   // Changes whenever who's in the network changes (add/remove/merge) —
@@ -41,7 +24,8 @@ export default function WidgetPreviewFrame({
   // since the widget only ever fetches once per mount otherwise (see
   // NetworkWidget.tsx's `initialized` ref).
   networkVersion: string;
-  buttonStyle: ButtonStyleValues;
+  label: string;
+  onSaveLabel: (label: string) => Promise<void>;
 }) {
   // Inline embed mode is hidden for now (floating is the only option exposed
   // here) — the widget engine itself still fully supports data-mode="inline"
@@ -51,6 +35,10 @@ export default function WidgetPreviewFrame({
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
+
+  const [labelDraft, setLabelDraft] = useState(label);
+  const [labelSaveState, setLabelSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  useEffect(() => setLabelDraft(label), [label]);
 
   const attrs = [`data-embed-key="${embedKey}"`];
   if (corner !== "bottom-right") attrs.push(`data-corner="${corner}"`);
@@ -62,64 +50,52 @@ export default function WidgetPreviewFrame({
     setTimeout(() => setCopied(false), 1500);
   }
 
-  const {
-    buttonFontFamily,
-    buttonFontSize,
-    buttonFontWeight,
-    buttonLetterSpacing,
-    buttonPaddingX,
-    buttonPaddingY,
-    buttonBorderColor,
-    buttonBorderWidth,
-    buttonBorderRadius,
-    buttonBackgroundColor,
-    buttonHoverStyle,
-  } = buttonStyle;
-
-  const mimicStyle: CSSProperties & Record<string, string | number> = {
-    paddingTop: buttonPaddingY,
-    paddingBottom: buttonPaddingY,
-    paddingLeft: buttonPaddingX,
-    paddingRight: buttonPaddingX,
-    borderRadius: buttonBorderRadius,
-    "--mimic-bg": buttonBackgroundColor,
-    "--mimic-border-color": buttonBorderColor,
-    "--mimic-border-width": `${buttonBorderWidth}px`,
-  };
-  const hoverClass = HOVER_STYLE_CLASS[buttonHoverStyle];
-  const selectedFont = FONT_BY_ID.get(buttonFontFamily) ?? FONT_OPTIONS[0];
+  async function saveLabel() {
+    const trimmed = labelDraft.trim();
+    if (!trimmed || trimmed === label) return;
+    setLabelSaveState("saving");
+    try {
+      await onSaveLabel(trimmed);
+      setLabelSaveState("saved");
+      setTimeout(() => setLabelSaveState("idle"), 1500);
+    } catch {
+      setLabelSaveState("error");
+    }
+  }
 
   return (
     <div className={styles.mainCol}>
-      {/* key forces a full remount (fresh fetch + reinit) whenever the
-          network's membership changes, rather than showing stale data —
-          NetworkWidget otherwise only ever fetches once per mount. */}
       <div className={styles.previewCard}>
         <NetworkWidget key={networkVersion} embedKey={embedKey} mode="inline" />
       </div>
 
       <div className={styles.buttonPreviewWrap}>
-        <div
-          className={`${styles.buttonMimic} ${hoverClass ? styles[hoverClass] : ""}`}
-          style={mimicStyle}
-        >
+        <div className={styles.buttonMimic}>
           <LauncherIcon />
-          <span
-            className={styles.buttonMimicLabel}
-            style={{
-              fontFamily: selectedFont.family,
-              fontSize: buttonFontSize,
-              fontWeight: buttonFontWeight,
-              letterSpacing: buttonLetterSpacing,
-            }}
-          >
-            {DEFAULT_LABEL}
-          </span>
+          <span className={styles.buttonMimicLabel}>{labelDraft || label}</span>
         </div>
       </div>
 
       <div className={styles.card}>
         <p className={styles.cardLabel}>Embed on your site</p>
+
+        <div className={styles.fieldRow}>
+          <span className={styles.label}>Button text</span>
+          <div className={styles.inputWithCounter}>
+            <input
+              value={labelDraft}
+              onChange={(e) => setLabelDraft(e.target.value.slice(0, BUTTON_LABEL_MAX_LENGTH))}
+              onBlur={saveLabel}
+              maxLength={BUTTON_LABEL_MAX_LENGTH}
+              className={styles.input}
+            />
+            <span className={styles.inputCounter}>
+              {labelDraft.length}/{BUTTON_LABEL_MAX_LENGTH}
+            </span>
+          </div>
+        </div>
+        {labelSaveState === "saved" && <p className={styles.hint}>Saved.</p>}
+        {labelSaveState === "error" && <p className={styles.error}>Couldn&apos;t save — try again.</p>}
 
         <div className={styles.fieldRow} style={{ flex: "0 0 160px" }}>
           <span className={styles.label}>Corner</span>

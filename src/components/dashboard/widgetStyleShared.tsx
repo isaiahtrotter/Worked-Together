@@ -1,63 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ButtonHoverStyle, WidgetSettings } from "@/lib/dal";
-import styles from "./widget-ui.module.css";
+import type { WidgetSettings } from "@/lib/dal";
 
 export const MAX_CORNER_RADIUS = 30;
-
-// Keep in sync with FONT_OPTIONS in public/network-widget/widget.js.
-export const FONT_OPTIONS: { id: string; label: string; family: string; google: string | null }[] = [
-  { id: "system", label: "System default", family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif", google: null },
-  { id: "inter", label: "Inter", family: "'Inter', sans-serif", google: "Inter:wght@400;500;600;700" },
-  { id: "roboto", label: "Roboto", family: "'Roboto', sans-serif", google: "Roboto:wght@400;500;700" },
-  { id: "poppins", label: "Poppins", family: "'Poppins', sans-serif", google: "Poppins:wght@400;500;600;700" },
-  { id: "montserrat", label: "Montserrat", family: "'Montserrat', sans-serif", google: "Montserrat:wght@400;500;600;700" },
-  { id: "space-grotesk", label: "Space Grotesk", family: "'Space Grotesk', sans-serif", google: "Space+Grotesk:wght@400;500;600;700" },
-  { id: "dm-sans", label: "DM Sans", family: "'DM Sans', sans-serif", google: "DM+Sans:wght@400;500;700" },
-  { id: "work-sans", label: "Work Sans", family: "'Work Sans', sans-serif", google: "Work+Sans:wght@400;500;600;700" },
-  { id: "nunito", label: "Nunito", family: "'Nunito', sans-serif", google: "Nunito:wght@400;600;700" },
-  { id: "playfair-display", label: "Playfair Display", family: "'Playfair Display', serif", google: "Playfair+Display:wght@400;600;700" },
-  { id: "merriweather", label: "Merriweather", family: "'Merriweather', serif", google: "Merriweather:wght@400;700" },
-  { id: "lora", label: "Lora", family: "'Lora', serif", google: "Lora:wght@400;500;600;700" },
-  { id: "space-mono", label: "Space Mono", family: "'Space Mono', monospace", google: "Space+Mono:wght@400;700" },
-  { id: "jetbrains-mono", label: "JetBrains Mono", family: "'JetBrains Mono', monospace", google: "JetBrains+Mono:wght@400;500;700" },
-  { id: "oswald", label: "Oswald", family: "'Oswald', sans-serif", google: "Oswald:wght@400;500;600;700" },
-  { id: "bebas-neue", label: "Bebas Neue", family: "'Bebas Neue', sans-serif", google: "Bebas+Neue" },
-];
-export const FONT_BY_ID = new Map(FONT_OPTIONS.map((f) => [f.id, f]));
+export const BUTTON_LABEL_MAX_LENGTH = 15;
 
 export const DEFAULT_SETTINGS: WidgetSettings = {
   theme: "light",
   cornerRadius: 24,
   shadow: 60,
-  buttonFontSize: 13,
-  buttonFontWeight: 600,
-  buttonLetterSpacing: 0,
-  buttonPaddingX: 16,
-  buttonPaddingY: 14,
-  buttonBorderColor: "#e0ded8",
-  buttonBorderWidth: 1,
-  buttonBorderRadius: 14,
-  buttonBackgroundColor: "#faf9f6",
-  buttonHoverStyle: "scale",
-  buttonFontFamily: "system",
-};
-
-export const HOVER_STYLES: { value: ButtonHoverStyle; label: string }[] = [
-  { value: "scale", label: "Scale" },
-  { value: "lift", label: "Lift" },
-  { value: "glow", label: "Glow" },
-  { value: "darken", label: "Darken" },
-  { value: "none", label: "None" },
-];
-
-export const HOVER_STYLE_CLASS: Record<ButtonHoverStyle, string | undefined> = {
-  scale: undefined,
-  lift: "hoverLift",
-  glow: "hoverGlow",
-  darken: "hoverDarken",
-  none: "hoverNone",
+  label: "View My Network",
 };
 
 export function shadowCss(intensity: number): string {
@@ -70,75 +22,11 @@ export function shadowCss(intensity: number): string {
 
 export function LauncherIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 64 64" style={{ flexShrink: 0 }}>
-      <line x1="32" y1="32" x2="14" y2="18" stroke="rgba(0,0,0,0.25)" strokeWidth="2.5" />
-      <line x1="32" y1="32" x2="50" y2="16" stroke="rgba(0,0,0,0.25)" strokeWidth="2.5" />
-      <line x1="32" y1="32" x2="16" y2="46" stroke="rgba(0,0,0,0.25)" strokeWidth="2.5" />
-      <line x1="32" y1="32" x2="48" y2="48" stroke="rgba(0,0,0,0.25)" strokeWidth="2.5" />
-      <circle cx="14" cy="18" r="6" fill="#D94F2B" />
-      <circle cx="50" cy="16" r="6" fill="#AC57D6" />
-      <circle cx="16" cy="46" r="6" fill="#128A66" />
-      <circle cx="48" cy="48" r="6" fill="#C2477F" />
-      <circle cx="32" cy="32" r="9" fill="#1D69E0" />
-    </svg>
-  );
-}
-
-export function FontPicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const selected = FONT_BY_ID.get(value) ?? FONT_OPTIONS[0];
-  const filtered = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return FONT_OPTIONS;
-    return FONT_OPTIONS.filter((f) => f.label.toLowerCase().includes(trimmed));
-  }, [query]);
-
-  return (
-    <div className={styles.searchWrap}>
-      <input
-        value={isOpen ? query : selected.label}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => {
-          setIsOpen(true);
-          setQuery("");
-        }}
-        onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-        placeholder="Search fonts…"
-        className={styles.input}
+    <svg width="25" height="14" viewBox="0 0 25 14" fill="none" style={{ flexShrink: 0 }} xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M1.83142 1.18462C2.46521 -0.0329248 4.88956 -0.366307 7.24548 0.439507C8.45198 0.852243 9.4059 1.4845 9.96521 2.16607C9.95051 1.92031 9.99862 1.68096 10.1156 1.45611C10.7492 0.238515 13.1728 -0.0956274 15.5287 0.710015C17.8846 1.51581 19.2812 3.15643 18.6478 4.37408C18.6324 4.40374 18.6146 4.43238 18.597 4.46099C19.4985 4.39843 20.5433 4.53304 21.5746 4.8858C23.9303 5.69171 25.3264 7.33227 24.6927 8.54986C24.2005 9.49537 22.6291 9.90445 20.848 9.66412C22.4649 10.5378 23.3085 11.818 22.7894 12.8155C22.1555 14.0329 19.7321 14.3663 17.3763 13.5606C16.4454 13.2422 15.6662 12.7915 15.101 12.2901C15.088 12.4709 15.0409 12.6475 14.9535 12.8155C14.3197 14.0329 11.8962 14.3662 9.54041 13.5606C7.18438 12.7548 5.78761 11.1142 6.42126 9.89654C6.4592 9.82367 6.50372 9.75404 6.55408 9.68755C5.58769 9.80774 4.42129 9.68846 3.27087 9.29498C0.915004 8.4891 -0.480927 6.84855 0.15271 5.63091C0.662638 4.65175 2.32993 4.2457 4.18884 4.54302C2.3048 3.67511 1.26956 2.26433 1.83142 1.18462ZM16.2084 5.54498C15.3078 5.60701 14.2648 5.47243 13.2347 5.12017C12.0271 4.70713 11.0723 4.0739 10.5131 3.39166C10.5281 3.63803 10.4809 3.87819 10.3636 4.10357C9.85362 5.08314 8.1853 5.48839 6.32556 5.19048C8.21077 6.05833 9.24601 7.4698 8.68396 8.54986C8.64633 8.62212 8.60198 8.69091 8.55212 8.75689C9.51833 8.63685 10.6843 8.75808 11.8344 9.15142C12.7647 9.46962 13.5436 9.91992 14.1088 10.421C14.1218 10.2404 14.1699 10.0643 14.2572 9.89654C14.7493 8.95099 16.3209 8.5411 18.1019 8.7813C16.4855 7.90762 15.6415 6.62822 16.1605 5.63091C16.1756 5.60188 16.1913 5.573 16.2084 5.54498Z"
+        fill="black"
       />
-      {isOpen && (
-        <div className={styles.searchDropdown}>
-          {filtered.length === 0 && (
-            <div className={styles.searchDropdownItem}>No matches.</div>
-          )}
-          {filtered.map((f, index) => (
-            <div
-              key={f.id}
-              className={styles.searchDropdownItem}
-              style={{
-                fontFamily: f.family,
-                animationDelay: `${Math.min(index, 6) * 20}ms`,
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange(f.id);
-                setIsOpen(false);
-                setQuery("");
-              }}
-            >
-              <span>{f.label}</span>
-              {f.id === value && <span style={{ fontFamily: "inherit" }}>✓</span>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </svg>
   );
 }

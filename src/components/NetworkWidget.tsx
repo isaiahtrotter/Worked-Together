@@ -5,16 +5,8 @@ import { fetchWidgetData } from "@/lib/fetchWidgetData";
 
 const WIDGET_MARKUP = `<div id="widget-root" class="corner-bottom-right">
   <div class="launcher" id="launcher-btn" role="button" aria-label="View My Network">
-    <svg width="22" height="22" viewBox="0 0 64 64" style="flex-shrink:0;">
-      <line x1="32" y1="32" x2="14" y2="18" stroke="rgba(0,0,0,0.25)" stroke-width="2.5"/>
-      <line x1="32" y1="32" x2="50" y2="16" stroke="rgba(0,0,0,0.25)" stroke-width="2.5"/>
-      <line x1="32" y1="32" x2="16" y2="46" stroke="rgba(0,0,0,0.25)" stroke-width="2.5"/>
-      <line x1="32" y1="32" x2="48" y2="48" stroke="rgba(0,0,0,0.25)" stroke-width="2.5"/>
-      <circle class="launcher-dot" cx="14" cy="18" r="6" fill="#D94F2B"/>
-      <circle class="launcher-dot" cx="50" cy="16" r="6" fill="#AC57D6"/>
-      <circle class="launcher-dot" cx="16" cy="46" r="6" fill="#128A66"/>
-      <circle class="launcher-dot" cx="48" cy="48" r="6" fill="#C2477F"/>
-      <circle cx="32" cy="32" r="9" fill="#1D69E0"/>
+    <svg width="25" height="14" viewBox="0 0 25 14" fill="none" style="flex-shrink:0;" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1.83142 1.18462C2.46521 -0.0329248 4.88956 -0.366307 7.24548 0.439507C8.45198 0.852243 9.4059 1.4845 9.96521 2.16607C9.95051 1.92031 9.99862 1.68096 10.1156 1.45611C10.7492 0.238515 13.1728 -0.0956274 15.5287 0.710015C17.8846 1.51581 19.2812 3.15643 18.6478 4.37408C18.6324 4.40374 18.6146 4.43238 18.597 4.46099C19.4985 4.39843 20.5433 4.53304 21.5746 4.8858C23.9303 5.69171 25.3264 7.33227 24.6927 8.54986C24.2005 9.49537 22.6291 9.90445 20.848 9.66412C22.4649 10.5378 23.3085 11.818 22.7894 12.8155C22.1555 14.0329 19.7321 14.3663 17.3763 13.5606C16.4454 13.2422 15.6662 12.7915 15.101 12.2901C15.088 12.4709 15.0409 12.6475 14.9535 12.8155C14.3197 14.0329 11.8962 14.3662 9.54041 13.5606C7.18438 12.7548 5.78761 11.1142 6.42126 9.89654C6.4592 9.82367 6.50372 9.75404 6.55408 9.68755C5.58769 9.80774 4.42129 9.68846 3.27087 9.29498C0.915004 8.4891 -0.480927 6.84855 0.15271 5.63091C0.662638 4.65175 2.32993 4.2457 4.18884 4.54302C2.3048 3.67511 1.26956 2.26433 1.83142 1.18462ZM16.2084 5.54498C15.3078 5.60701 14.2648 5.47243 13.2347 5.12017C12.0271 4.70713 11.0723 4.0739 10.5131 3.39166C10.5281 3.63803 10.4809 3.87819 10.3636 4.10357C9.85362 5.08314 8.1853 5.48839 6.32556 5.19048C8.21077 6.05833 9.24601 7.4698 8.68396 8.54986C8.64633 8.62212 8.60198 8.69091 8.55212 8.75689C9.51833 8.63685 10.6843 8.75808 11.8344 9.15142C12.7647 9.46962 13.5436 9.91992 14.1088 10.421C14.1218 10.2404 14.1699 10.0643 14.2572 9.89654C14.7493 8.95099 16.3209 8.5411 18.1019 8.7813C16.4855 7.90762 15.6415 6.62822 16.1605 5.63091C16.1756 5.60188 16.1913 5.573 16.2084 5.54498Z" fill="black"/>
     </svg>
     <span id="launcher-icon-emoji" style="display:none;font-size:16px;line-height:1;"></span>
     <span class="launcher-label">View My Network</span>
@@ -55,15 +47,6 @@ type WidgetOptions = {
   theme?: "light" | "dark";
   cornerRadius?: number;
   shadow?: number;
-  buttonFontSize?: number;
-  buttonFontWeight?: number;
-  buttonLetterSpacing?: number;
-  buttonPaddingX?: number;
-  buttonPaddingY?: number;
-  buttonBorderColor?: string;
-  buttonBorderWidth?: number;
-  buttonBackgroundColor?: string;
-  buttonHoverStyle?: string;
   icon?: boolean;
   iconEmoji?: string;
   appOrigin?: string;

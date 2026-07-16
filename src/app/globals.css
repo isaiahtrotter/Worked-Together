@@ -47,18 +47,3 @@ a {
     color-scheme: dark;
   }
 }
-
-.google-signin-btn {
-  padding: 10px 20px;
-  font-size: 15px;
-  font-weight: 500;
-  border-radius: 8px;
-  border: 1px solid #d0d0d0;
-  background: #fff;
-  color: #1c1c1a;
-  cursor: pointer;
-}
-
-.google-signin-btn:hover {
-  background: #f5f5f5;
-}

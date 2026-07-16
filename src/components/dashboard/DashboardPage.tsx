@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "@/app/dashboard/actions";
+import { signOut, updateWidgetSettings } from "@/app/dashboard/actions";
 import type { DirectoryEntry, Profile, WidgetSettings, WorkSample } from "@/lib/dal";
-import { DEFAULT_SETTINGS, MAX_CORNER_RADIUS } from "./widgetStyleShared";
+import { DEFAULT_SETTINGS } from "./widgetStyleShared";
 import WidgetPreviewFrame from "./WidgetPreviewFrame";
 import ProfileSection from "./ProfileSection";
 import WorkSamplesSection from "./WorkSamplesSection";
@@ -40,23 +40,15 @@ export default function DashboardPage({
   // those fields undefined and crashes the controls below.
   const settings: WidgetSettings = { ...DEFAULT_SETTINGS, ...profile.widget_settings };
 
-  // Neither the inline preview (radius/shadow/theme) nor the button style
-  // panel is editable right now — both are hidden for now. These just carry
-  // the persisted values through so the button preview still renders
-  // correctly and nothing gets clobbered if editing comes back later.
-  const [buttonFontFamily] = useState(settings.buttonFontFamily);
-  const [buttonFontSize] = useState(settings.buttonFontSize);
-  const [buttonFontWeight] = useState(settings.buttonFontWeight);
-  const [buttonLetterSpacing] = useState(settings.buttonLetterSpacing);
-  const [buttonPaddingX] = useState(settings.buttonPaddingX);
-  const [buttonPaddingY] = useState(settings.buttonPaddingY);
-  const [buttonBorderColor] = useState(settings.buttonBorderColor);
-  const [buttonBorderWidth] = useState(settings.buttonBorderWidth);
-  const [buttonBorderRadius] = useState(
-    Math.min(settings.buttonBorderRadius, MAX_CORNER_RADIUS),
-  );
-  const [buttonBackgroundColor] = useState(settings.buttonBackgroundColor);
-  const [buttonHoverStyle] = useState(settings.buttonHoverStyle);
+  // The inline preview (radius/shadow/theme) isn't editable right now — it's
+  // hidden for now. This just carries the persisted values through so
+  // nothing gets clobbered if editing comes back later.
+  const [label, setLabel] = useState(settings.label);
+
+  async function handleSaveLabel(newLabel: string) {
+    setLabel(newLabel);
+    await updateWidgetSettings({ ...settings, label: newLabel });
+  }
 
   // Who's actually in the network right now — changes whenever a connection
   // is added, removed, or merged, regardless of order, so the live preview
@@ -113,19 +105,8 @@ export default function DashboardPage({
           <WidgetPreviewFrame
             embedKey={profile.embed_key}
             networkVersion={networkVersion}
-            buttonStyle={{
-              buttonFontFamily,
-              buttonFontSize,
-              buttonFontWeight,
-              buttonLetterSpacing,
-              buttonPaddingX,
-              buttonPaddingY,
-              buttonBorderColor,
-              buttonBorderWidth,
-              buttonBorderRadius,
-              buttonBackgroundColor,
-              buttonHoverStyle,
-            }}
+            label={label}
+            onSaveLabel={handleSaveLabel}
           />
         </section>
       </main>

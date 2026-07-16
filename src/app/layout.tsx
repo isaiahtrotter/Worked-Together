@@ -31,6 +31,14 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap"
           rel="stylesheet"
         />
+        {/* Loaded by literal family name (not the next/font-scoped
+            --font-geist-sans variable) so the same "Geist" reference in
+            widget.css / widget-ui.module.css resolves identically here and
+            in a real third-party embed, which has no access to next/font. */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Geist:wght@600&display=swap"
+          rel="stylesheet"
+        />
         <link rel="stylesheet" href="/network-widget/widget.css" />
       </head>
       <body>{children}</body>

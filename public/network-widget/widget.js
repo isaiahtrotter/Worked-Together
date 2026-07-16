@@ -10,47 +10,6 @@
         var shadowRaw = options.shadow != null ? options.shadow : (settings.shadow != null ? settings.shadow : 60);
         var shadowIntensity = typeof shadowRaw === "boolean" ? (shadowRaw ? 60 : 0) : shadowRaw;
 
-        var btnFontSize = options.buttonFontSize != null ? options.buttonFontSize : (settings.buttonFontSize != null ? settings.buttonFontSize : 13);
-        var btnFontWeight = options.buttonFontWeight != null ? options.buttonFontWeight : (settings.buttonFontWeight != null ? settings.buttonFontWeight : 600);
-        var btnLetterSpacing = options.buttonLetterSpacing != null ? options.buttonLetterSpacing : (settings.buttonLetterSpacing != null ? settings.buttonLetterSpacing : 0);
-        var btnPaddingX = options.buttonPaddingX != null ? options.buttonPaddingX : (settings.buttonPaddingX != null ? settings.buttonPaddingX : 16);
-        var btnPaddingY = options.buttonPaddingY != null ? options.buttonPaddingY : (settings.buttonPaddingY != null ? settings.buttonPaddingY : 14);
-        var btnBorderColor = options.buttonBorderColor || settings.buttonBorderColor || "rgba(0,0,0,0.1)";
-        var btnBorderWidth = options.buttonBorderWidth != null ? options.buttonBorderWidth : (settings.buttonBorderWidth != null ? settings.buttonBorderWidth : 1);
-        var btnBorderRadius = options.buttonBorderRadius != null ? options.buttonBorderRadius : (settings.buttonBorderRadius != null ? settings.buttonBorderRadius : 14);
-        var btnBg = options.buttonBackgroundColor || settings.buttonBackgroundColor || "#faf9f6";
-        var btnHoverStyle = options.buttonHoverStyle || settings.buttonHoverStyle || "scale";
-
-        // Keep in sync with FONT_OPTIONS in src/components/dashboard/EmbedDesigner.tsx.
-        var FONT_OPTIONS = {
-          system: { family: "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif", google: null },
-          inter: { family: "'Inter',sans-serif", google: "Inter:wght@400;500;600;700" },
-          roboto: { family: "'Roboto',sans-serif", google: "Roboto:wght@400;500;700" },
-          poppins: { family: "'Poppins',sans-serif", google: "Poppins:wght@400;500;600;700" },
-          montserrat: { family: "'Montserrat',sans-serif", google: "Montserrat:wght@400;500;600;700" },
-          "space-grotesk": { family: "'Space Grotesk',sans-serif", google: "Space+Grotesk:wght@400;500;600;700" },
-          "dm-sans": { family: "'DM Sans',sans-serif", google: "DM+Sans:wght@400;500;700" },
-          "work-sans": { family: "'Work Sans',sans-serif", google: "Work+Sans:wght@400;500;600;700" },
-          nunito: { family: "'Nunito',sans-serif", google: "Nunito:wght@400;600;700" },
-          "playfair-display": { family: "'Playfair Display',serif", google: "Playfair+Display:wght@400;600;700" },
-          merriweather: { family: "'Merriweather',serif", google: "Merriweather:wght@400;700" },
-          lora: { family: "'Lora',serif", google: "Lora:wght@400;500;600;700" },
-          "space-mono": { family: "'Space Mono',monospace", google: "Space+Mono:wght@400;700" },
-          "jetbrains-mono": { family: "'JetBrains Mono',monospace", google: "JetBrains+Mono:wght@400;500;700" },
-          oswald: { family: "'Oswald',sans-serif", google: "Oswald:wght@400;500;600;700" },
-          "bebas-neue": { family: "'Bebas Neue',sans-serif", google: "Bebas+Neue" },
-        };
-        var btnFontFamilyKey = options.buttonFontFamily || settings.buttonFontFamily || "system";
-        var btnFontOption = FONT_OPTIONS[btnFontFamilyKey] || FONT_OPTIONS.system;
-        if (btnFontOption.google && !document.getElementById("wt-btn-font-link")) {
-          var fontLink = document.createElement("link");
-          fontLink.id = "wt-btn-font-link";
-          fontLink.rel = "stylesheet";
-          fontLink.href =
-            "https://fonts.googleapis.com/css2?family=" + btnFontOption.google + "&display=swap";
-          document.head.appendChild(fontLink);
-        }
-
         var svg = d3.select("#graph-svg");
         var container = document.getElementById("ring-app");
         var panel = document.getElementById("side-panel");
@@ -74,24 +33,6 @@
         } else {
           widgetRoot.style.setProperty("--wt-shadow", "none");
         }
-        widgetRoot.style.setProperty("--wt-btn-font-size", btnFontSize + "px");
-        widgetRoot.style.setProperty("--wt-btn-font-weight", btnFontWeight);
-        widgetRoot.style.setProperty("--wt-btn-letter-spacing", btnLetterSpacing + "px");
-        widgetRoot.style.setProperty("--wt-btn-padding-x", btnPaddingX + "px");
-        widgetRoot.style.setProperty("--wt-btn-padding-y", btnPaddingY + "px");
-        widgetRoot.style.setProperty("--wt-btn-border-color", btnBorderColor);
-        widgetRoot.style.setProperty("--wt-btn-border-width", btnBorderWidth + "px");
-        widgetRoot.style.setProperty("--wt-btn-radius", btnBorderRadius + "px");
-        widgetRoot.style.setProperty("--wt-btn-bg", btnBg);
-        widgetRoot.style.setProperty("--wt-btn-font-family", btnFontOption.family);
-
-        ["hover-lift", "hover-glow", "hover-darken", "hover-none"].forEach(function (c) {
-          widgetRoot.classList.remove(c);
-        });
-        if (btnHoverStyle !== "scale") {
-          widgetRoot.classList.add("hover-" + btnHoverStyle);
-        }
-
         if (mode === "floating") {
           var corner = options.corner || settings.corner || "bottom-right";
           ["bottom-right", "bottom-left", "top-right", "top-left"].forEach(function (c) {
