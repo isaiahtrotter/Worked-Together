@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { removeConnection } from "@/app/dashboard/connections/actions";
+import { removeConnection, deletePlaceholderConnection } from "@/app/dashboard/connections/actions";
 import { MiniAvatar } from "./ConnectionsSection";
 import ConfirmDialog from "./ConfirmDialog";
 import ConnectionProfileModal from "./ConnectionProfileModal";
@@ -40,7 +40,14 @@ export default function YourNetworkSection({
   const [query, setQuery] = useState("");
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [removeTarget, setRemoveTarget] = useState<{ requestId: string; name: string } | null>(null);
+  // placeholderId set = this is a placeholder's permanent delete (destroys
+  // the profile itself); null = a real connection's removeConnection (just
+  // drops the relationship, the other account is untouched).
+  const [deleteTarget, setDeleteTarget] = useState<{
+    requestId: string;
+    placeholderId: string | null;
+    name: string;
+  } | null>(null);
 
   useEffect(() => setAcceptedState(accepted), [accepted]);
 
@@ -56,15 +63,19 @@ export default function YourNetworkSection({
   const hiddenCount = filtered.length - visible.length;
   const selectedRow = acceptedState.find((r) => r.request.id === selectedRequestId) ?? null;
 
-  function handleConfirmRemove() {
-    if (!removeTarget) return;
-    const { requestId } = removeTarget;
-    setRemoveTarget(null);
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    const { requestId, placeholderId } = deleteTarget;
+    setDeleteTarget(null);
     setAcceptedState((prev) => prev.filter((r) => r.request.id !== requestId));
-    removeConnection(requestId)
-      .then(() => router.refresh())
+    const action = placeholderId ? deletePlaceholderConnection(placeholderId) : removeConnection(requestId);
+    action
+      .then((result) => {
+        if (result && "error" in result && result.error) toast(result.error);
+        router.refresh();
+      })
       .catch((err) => {
-        toast(err instanceof Error ? err.message : "Couldn't remove connection.");
+        toast(err instanceof Error ? err.message : "Couldn't delete.");
         router.refresh();
       });
   }
@@ -132,28 +143,30 @@ export default function YourNetworkSection({
           row={selectedRow}
           owner={owner}
           onClose={() => setSelectedRequestId(null)}
-          onRequestRemove={(name) => {
+          onRequestDelete={(name) => {
             setSelectedRequestId(null);
-            setRemoveTarget({ requestId: selectedRow.request.id, name });
-          }}
-          onDeleted={(requestId) => {
-            setSelectedRequestId(null);
-            setAcceptedState((prev) => prev.filter((r) => r.request.id !== requestId));
+            setDeleteTarget({
+              requestId: selectedRow.request.id,
+              placeholderId: selectedRow.other && !selectedRow.other.user_id ? selectedRow.other.id : null,
+              name,
+            });
           }}
         />
       )}
 
       <ConfirmDialog
-        open={removeTarget !== null}
-        title="Remove connection?"
+        open={deleteTarget !== null}
+        title={deleteTarget?.placeholderId ? "Delete this connection?" : "Remove connection?"}
         message={
-          removeTarget
-            ? `${removeTarget.name} will no longer be shown in your network, and you'll no longer be shown in theirs.`
+          deleteTarget
+            ? deleteTarget.placeholderId
+              ? `This permanently deletes ${deleteTarget.name}. This can't be undone.`
+              : `${deleteTarget.name} will no longer be shown in your network, and you'll no longer be shown in theirs.`
             : ""
         }
-        confirmLabel="Remove"
-        onConfirm={handleConfirmRemove}
-        onCancel={() => setRemoveTarget(null)}
+        confirmLabel={deleteTarget?.placeholderId ? "Delete" : "Remove"}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

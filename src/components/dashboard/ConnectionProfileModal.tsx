@@ -8,7 +8,6 @@ import {
   searchProfilesByName,
   inviteMergeConnection,
   dismissMergeSuggestion,
-  deletePlaceholderConnection,
   type SearchResult,
 } from "@/app/dashboard/connections/actions";
 import { MiniAvatar } from "./ConnectionsSection";
@@ -37,19 +36,27 @@ export default function ConnectionProfileModal({
   row,
   owner,
   onClose,
-  onRequestRemove,
-  onDeleted,
+  onRequestDelete,
 }: {
   row: AcceptedRow;
   owner: { id: string; name: string; avatar_url: string | null };
   onClose: () => void;
-  onRequestRemove: (name: string) => void;
-  onDeleted: (requestId: string) => void;
+  // Fires for both a real connection's "Remove connection" and a
+  // placeholder's "Delete" -- the parent decides which server action to
+  // run (and shows the confirm dialog) since it already knows which kind
+  // this row is.
+  onRequestDelete: (name: string) => void;
 }) {
   const router = useRouter();
   const toast = useToast();
   const { request, other, note, endorsement, mergeSuggestion, pendingMergeTarget } = row;
   const isPlaceholder = !!other && !other.user_id;
+
+  const [noteDraft, setNoteDraft] = useState(note);
+  useEffect(() => setNoteDraft(note), [note]);
+  const [endorsementDraft, setEndorsementDraft] = useState(endorsement);
+  useEffect(() => setEndorsementDraft(endorsement), [endorsement]);
+  const [saving, setSaving] = useState(false);
 
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
   const [mergeQuery, setMergeQuery] = useState("");
@@ -57,6 +64,8 @@ export default function ConnectionProfileModal({
   const [mergeSearching, setMergeSearching] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const mergeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isDirty = noteDraft !== note || (!!other && endorsementDraft !== endorsement);
 
   useEffect(() => {
     if (mergeDebounceRef.current) clearTimeout(mergeDebounceRef.current);
@@ -77,13 +86,46 @@ export default function ConnectionProfileModal({
     };
   }, [mergeQuery]);
 
+  // Closing without saving shouldn't leave the live widget preview showing
+  // typed-but-discarded text -- push the original values back over
+  // whatever the draft last pushed.
+  function handleClose() {
+    if (other && isDirty) {
+      if (noteDraft !== note) updateConnectionPreview(other.id, { relationship: note });
+      if (endorsementDraft !== endorsement) {
+        updateConnectionEndorsementPreview(other.id, owner.id, owner.name, owner.avatar_url, endorsement);
+      }
+    }
+    onClose();
+  }
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleClose closes
+    // over noteDraft/endorsementDraft/note/endorsement, all already current
+    // each render; re-binding this listener every keystroke isn't needed.
+  }, []);
+
+  async function handleSave() {
+    if (!isDirty) return;
+    setSaving(true);
+    try {
+      const tasks: Promise<unknown>[] = [];
+      if (noteDraft !== note) tasks.push(saveConnectionNote(request.id, noteDraft));
+      if (other && endorsementDraft !== endorsement) tasks.push(saveEndorsement(other.id, endorsementDraft));
+      await Promise.all(tasks);
+      toast("Saved");
+      router.refresh();
+    } catch {
+      toast("Couldn't save — try again");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function openMergePicker() {
     setMergePickerOpen(true);
@@ -113,20 +155,6 @@ export default function ConnectionProfileModal({
       });
   }
 
-  function handleDeletePlaceholder() {
-    if (!other) return;
-    onDeleted(request.id);
-    deletePlaceholderConnection(other.id)
-      .then((result) => {
-        if (result.error) toast(result.error);
-        router.refresh();
-      })
-      .catch((err) => {
-        toast(err instanceof Error ? err.message : "Couldn't delete.");
-        router.refresh();
-      });
-  }
-
   function handleDismissSuggestion(targetId: string) {
     if (!other) return;
     dismissMergeSuggestion(other.id, targetId)
@@ -135,7 +163,7 @@ export default function ConnectionProfileModal({
   }
 
   return (
-    <div className={styles.dialogOverlay} onClick={onClose}>
+    <div className={`${styles.dialogOverlay} ${styles.profileDialogOverlay}`} onClick={handleClose}>
       <div
         className={`${styles.dialogBox} ${styles.profileDialogBox}`}
         onClick={(e) => e.stopPropagation()}
@@ -154,7 +182,7 @@ export default function ConnectionProfileModal({
           <button
             type="button"
             className={styles.profileDialogCloseBtn}
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -166,82 +194,75 @@ export default function ConnectionProfileModal({
 
         <div className={styles.profileDialogFields}>
           <div className={styles.controlRow}>
-            <span className={styles.label}>How do you know them? (private)</span>
+            <span className={styles.label}>How do you know them?</span>
             <div className={styles.inputWithCounter}>
               <input
                 name="note"
-                defaultValue={note}
+                value={noteDraft}
                 maxLength={NOTE_MAX_LENGTH}
                 placeholder="e.g. College roommate"
                 className={styles.input}
                 style={{ width: "100%" }}
                 onChange={(e) => {
+                  setNoteDraft(e.target.value);
                   if (other) updateConnectionPreview(other.id, { relationship: e.target.value });
-                }}
-                onBlur={(e) => {
-                  const value = e.target.value;
-                  if (value === note) return;
-                  saveConnectionNote(request.id, value)
-                    .then(() => {
-                      toast("Saved");
-                      router.refresh();
-                    })
-                    .catch(() => toast("Couldn't save — try again"));
                 }}
               />
               <span className={styles.inputCounter}>
-                {Math.min(note.length, NOTE_MAX_LENGTH)}/{NOTE_MAX_LENGTH}
+                {noteDraft.length}/{NOTE_MAX_LENGTH}
               </span>
             </div>
           </div>
 
           {other && (
             <div className={styles.controlRow}>
-              <span className={styles.label}>Public recommendation</span>
+              <span className={styles.label}>Recommendation</span>
               <div className={styles.textareaWithCounter}>
                 <textarea
                   name="endorsement"
-                  defaultValue={endorsement}
+                  value={endorsementDraft}
                   maxLength={ENDORSEMENT_MAX_LENGTH}
                   placeholder="Write a public recommendation…"
                   className={styles.textarea}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setEndorsementDraft(e.target.value);
                     updateConnectionEndorsementPreview(
                       other.id,
                       owner.id,
                       owner.name,
                       owner.avatar_url,
                       e.target.value,
-                    )
-                  }
-                  onBlur={(e) => {
-                    const value = e.target.value;
-                    if (value === endorsement) return;
-                    saveEndorsement(other.id, value)
-                      .then(() => {
-                        toast("Saved");
-                        router.refresh();
-                      })
-                      .catch(() => toast("Couldn't save — try again"));
+                    );
                   }}
                 />
                 <span className={styles.inputCounter}>
-                  {Math.min(endorsement.length, ENDORSEMENT_MAX_LENGTH)}/{ENDORSEMENT_MAX_LENGTH}
+                  {endorsementDraft.length}/{ENDORSEMENT_MAX_LENGTH}
                 </span>
               </div>
             </div>
           )}
+
+          <button
+            type="button"
+            className={styles.saveButton}
+            disabled={!isDirty || saving}
+            onClick={handleSave}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
 
         {!isPlaceholder && other && (
           <div className={styles.profileDialogFooter}>
-            <button
-              type="button"
-              className={styles.smallLinkBtn}
-              onClick={() => onRequestRemove(other.name)}
-            >
-              Remove connection
-            </button>
+            <div className={styles.profileDialogFooterActions}>
+              <button
+                type="button"
+                className={styles.btnDanger}
+                onClick={() => onRequestDelete(other.name)}
+              >
+                Remove connection
+              </button>
+            </div>
           </div>
         )}
 
@@ -326,13 +347,22 @@ export default function ConnectionProfileModal({
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 12 }}>
+            <div className={styles.profileDialogFooterActions}>
               {!pendingMergeTarget && !mergePickerOpen && (
-                <button type="button" className={styles.smallLinkBtn} onClick={openMergePicker}>
-                  Merge into another profile…
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  style={{ marginRight: "auto" }}
+                  onClick={openMergePicker}
+                >
+                  Merge existing profile
                 </button>
               )}
-              <button type="button" className={styles.smallLinkBtn} onClick={handleDeletePlaceholder}>
+              <button
+                type="button"
+                className={styles.btnDanger}
+                onClick={() => onRequestDelete(other.name)}
+              >
                 Delete
               </button>
             </div>

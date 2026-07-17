@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import NetworkWidget from "@/components/NetworkWidget";
-import { BUTTON_LABEL_MAX_LENGTH, LauncherIcon } from "./widgetStyleShared";
+import { BUTTON_LABEL_MAX_LENGTH, DEFAULT_SETTINGS, LauncherIcon } from "./widgetStyleShared";
 import { useToast } from "./ToastProvider";
 import styles from "./widget-ui.module.css";
 
@@ -183,7 +183,7 @@ export default function WidgetPreviewFrame({
             onChange={(e) => setLabelDraft(e.target.value.slice(0, BUTTON_LABEL_MAX_LENGTH))}
             onBlur={saveLabel}
             maxLength={BUTTON_LABEL_MAX_LENGTH}
-            placeholder="Button text"
+            placeholder={DEFAULT_SETTINGS.label}
             className={styles.input}
           />
           <span className={styles.inputCounter}>
@@ -219,39 +219,40 @@ export default function WidgetPreviewFrame({
             <CornerGraphic corner="bottom-right" />
           </button>
         </div>
-      </div>
 
-      <div
-        className={styles.snippetWrap}
-        onClick={copy}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
-        role="button"
-        tabIndex={0}
-        aria-label="Copy embed code to clipboard"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            copy();
-          }
-        }}
-      >
-        <pre className={styles.snippet}>
-          <EmbedSnippet origin={origin} embedKey={embedKey} corner={corner} />
-        </pre>
         <div
-          className={`${styles.snippetHoverOverlay} ${copied || hovering ? styles.snippetHoverOverlayActive : ""}`}
+          className={styles.snippetWrap}
+          onClick={copy}
+          onMouseEnter={() => setHovering(true)}
+          onMouseLeave={() => setHovering(false)}
+          role="button"
+          tabIndex={0}
+          aria-label="Copy embed code to clipboard"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              copy();
+            }
+          }}
+          style={{ marginTop: 16 }}
         >
-          {copied ? (
-            <span>Copied to clipboard</span>
-          ) : (
-            hovering && (
-              <>
-                <CopyIcon />
-                <span>Copy to clipboard</span>
-              </>
-            )
-          )}
+          <pre className={styles.snippet}>
+            <EmbedSnippet origin={origin} embedKey={embedKey} corner={corner} />
+          </pre>
+          <div
+            className={`${styles.snippetHoverOverlay} ${copied || hovering ? styles.snippetHoverOverlayActive : ""}`}
+          >
+            {copied ? (
+              <span>Copied to clipboard</span>
+            ) : (
+              hovering && (
+                <>
+                  <CopyIcon />
+                  <span>Copy to clipboard</span>
+                </>
+              )
+            )}
+          </div>
         </div>
       </div>
     </div>
