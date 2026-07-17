@@ -167,8 +167,10 @@
   outline-color: rgba(99, 91, 255, 0.35);
 }
 
-.cornerOptionActive {
-  outline-color: #635bff;
+.cornerOptionActive,
+.cornerOptionActive:hover {
+  outline: 1px solid #000;
+  outline-offset: -1px;
 }
 
 .fieldRowGroup {
@@ -965,14 +967,13 @@
     opacity 0.3s ease;
 }
 
-.snippetWrap:hover .snippetHoverOverlay {
+/* Driven by JS hover/copied state, not :hover -- so "Copied to clipboard"
+   can fade all the way to nothing on its own timer instead of the CSS
+   :hover rule instantly swapping it back to the icon+text prompt while the
+   mouse is still sitting on it from the click that triggered it. */
+.snippetHoverOverlayActive {
   background: rgba(28, 28, 26, 0.82);
   opacity: 1;
-}
-
-.snippetHoverOverlayActive {
-  background: rgba(28, 28, 26, 0.82) !important;
-  opacity: 1 !important;
 }
 
 /* Syntax-highlighted embed snippet tokens */
