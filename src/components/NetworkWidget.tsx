@@ -122,7 +122,11 @@ function NetworkWidget({
 
   return (
     <div
-      style={mode === "inline" ? { width: "100%", height: "100%" } : undefined}
+      // Fixed height (rather than height:100%) so this can drop directly
+      // into a caller's layout with no sizing wrapper of its own -- the
+      // only inline usage (the dashboard's Widget card) sits right below
+      // that card's own heading/text with nothing else in between.
+      style={mode === "inline" ? { width: "100%", height: 420 } : undefined}
       dangerouslySetInnerHTML={{ __html: WIDGET_MARKUP }}
     />
   );

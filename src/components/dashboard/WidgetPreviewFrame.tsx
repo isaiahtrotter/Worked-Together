@@ -128,7 +128,15 @@ export default function WidgetPreviewFrame({
 
   async function saveLabel() {
     const trimmed = labelDraft.trim();
-    if (!trimmed || trimmed === label) return;
+    // Clearing it isn't a valid label to save -- snap the input (and with
+    // it the button preview, which already falls back to `label` while
+    // labelDraft is empty) back to the last saved text instead of leaving
+    // the field blank.
+    if (!trimmed) {
+      setLabelDraft(label);
+      return;
+    }
+    if (trimmed === label) return;
     try {
       await onSaveLabel(trimmed);
       toast("Saved");
@@ -160,14 +168,12 @@ export default function WidgetPreviewFrame({
         <p className={styles.hint} style={{ margin: "4px 0 16px" }}>
           Light and dark mode here are applied as the default state when opened.
         </p>
-        <div className={styles.previewCard}>
-          <NetworkWidget
-            key={networkVersion}
-            embedKey={embedKey}
-            mode="inline"
-            onThemeChange={handleThemeChange}
-          />
-        </div>
+        <NetworkWidget
+          key={networkVersion}
+          embedKey={embedKey}
+          mode="inline"
+          onThemeChange={handleThemeChange}
+        />
       </div>
 
       <div className={styles.buttonPreviewWrap}>
