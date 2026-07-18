@@ -48,11 +48,12 @@ export default function ConnectionsSection({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestSeq = useRef(0);
 
-  // "Add without an account" -- surfaced only once a name search comes up
-  // empty, rather than as its own separate flow next to this one. The
-  // typed name is never sent along with it: detection comes entirely from
-  // the pasted link's own metadata (see addPlaceholderConnection), so
-  // there's nothing here to save except the link itself.
+  // "Create connection" -- surfaced only once a name search comes up empty,
+  // rather than as its own separate flow next to this one. Clicking it
+  // swaps the search bar out for the link form below; the typed name is
+  // never sent along with it, since detection comes entirely from the
+  // pasted link's own metadata (see addPlaceholderConnection).
+  const [creating, setCreating] = useState(false);
   const [link, setLink] = useState("");
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -137,94 +138,120 @@ export default function ConnectionsSection({
 
     setLink("");
     setQuery("");
+    setCreating(false);
     router.refresh();
   }
 
   const trimmedQuery = query.trim();
-  const showAddWithoutAccount = !!trimmedQuery && !isSearching && !searchError && results.length === 0;
 
   return (
     <div className={styles.card}>
       <p className={styles.cardLabel}>Add a connection</p>
 
-      <div className={styles.searchWrap}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-          placeholder="Search by name"
-          className={styles.input}
-          style={{ width: "100%" }}
-        />
-        {isOpen && trimmedQuery && (
-          <div className={styles.searchDropdown}>
-            {isSearching && <div className={styles.searchDropdownItem}>Searching…</div>}
-            {!isSearching && searchError && (
-              <div className={styles.searchDropdownItem}>{searchError}</div>
-            )}
-            {!isSearching && !searchError && results.length === 0 && (
-              <div className={styles.searchDropdownItem}>No matches for “{trimmedQuery}”.</div>
-            )}
-            {!isSearching &&
-              results.map((r, index) => (
-                <div
-                  key={r.id}
-                  className={styles.searchDropdownItem}
-                  style={{ animationDelay: `${Math.min(index, 6) * 25}ms` }}
-                >
-                  <span className={styles.searchDropdownIdentity}>
-                    <MiniAvatar url={r.avatar_url} name={r.name} />
-                    <span>{r.name}</span>
-                  </span>
-                  {r.status === "not_connected" && (
-                    <button
-                      type="button"
-                      className={styles.btnSecondary}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleSendRequest(r.id)}
-                    >
-                      Send request
-                    </button>
-                  )}
-                  {r.status === "pending_outgoing" && (
-                    <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
-                  )}
-                  {r.status === "pending_incoming" && (
-                    <span className={`${styles.badge} ${styles.badgeIncoming}`}>
-                      Wants to connect
-                    </span>
-                  )}
-                  {r.status === "connected" && (
-                    <span className={`${styles.badge} ${styles.badgeConnected}`}>Connected</span>
-                  )}
-                </div>
-              ))}
-          </div>
-        )}
-      </div>
-
-      {showAddWithoutAccount && (
-        <form onSubmit={handleAddPlaceholder} className={styles.fieldRow} style={{ marginTop: 10 }}>
-          <span className={styles.hint} style={{ margin: 0 }}>
-            Can&apos;t find them? Add them without an account — paste a link to their work:
-          </span>
+      {!creating && (
+        <div className={styles.searchWrap}>
           <input
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="Twitter, Behance, Dribbble, anything"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+            placeholder="Search by name"
             className={styles.input}
-            required
+            style={{ width: "100%" }}
           />
-          <button
-            type="submit"
-            className={styles.btnSecondary}
-            disabled={addSubmitting}
-            style={{ alignSelf: "flex-start" }}
-          >
-            {addSubmitting ? "Adding…" : "Add"}
-          </button>
+          {isOpen && trimmedQuery && (
+            <div className={styles.searchDropdown}>
+              {isSearching && <div className={styles.searchDropdownItem}>Searching…</div>}
+              {!isSearching && searchError && (
+                <div className={styles.searchDropdownItem}>{searchError}</div>
+              )}
+              {!isSearching && !searchError && results.length === 0 && (
+                <div className={styles.searchDropdownItem}>
+                  <span>No matches for “{trimmedQuery}”</span>
+                  <button
+                    type="button"
+                    className={styles.btnSecondary}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setCreating(true)}
+                  >
+                    Create connection
+                  </button>
+                </div>
+              )}
+              {!isSearching &&
+                results.map((r, index) => (
+                  <div
+                    key={r.id}
+                    className={styles.searchDropdownItem}
+                    style={{ animationDelay: `${Math.min(index, 6) * 25}ms` }}
+                  >
+                    <span className={styles.searchDropdownIdentity}>
+                      <MiniAvatar url={r.avatar_url} name={r.name} />
+                      <span>{r.name}</span>
+                    </span>
+                    {r.status === "not_connected" && (
+                      <button
+                        type="button"
+                        className={styles.btnSecondary}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSendRequest(r.id)}
+                      >
+                        Send request
+                      </button>
+                    )}
+                    {r.status === "pending_outgoing" && (
+                      <span className={`${styles.badge} ${styles.badgePending}`}>Pending</span>
+                    )}
+                    {r.status === "pending_incoming" && (
+                      <span className={`${styles.badge} ${styles.badgeIncoming}`}>
+                        Wants to connect
+                      </span>
+                    )}
+                    {r.status === "connected" && (
+                      <span className={`${styles.badge} ${styles.badgeConnected}`}>Connected</span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {creating && (
+        <form onSubmit={handleAddPlaceholder} className={styles.fieldRow}>
+          <span className={styles.label}>Add them without an account — paste a link to their work:</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="Twitter, Behance, Dribbble, Contra, etc..."
+              className={styles.input}
+              style={{ flex: 1, minWidth: 0 }}
+              required
+              autoFocus
+            />
+            <button
+              type="submit"
+              className={styles.btnSecondary}
+              disabled={addSubmitting}
+              style={{ flexShrink: 0 }}
+            >
+              {addSubmitting ? "Adding…" : "Add"}
+            </button>
+          </div>
           {addError && <p className={styles.error}>{addError}</p>}
+          <button
+            type="button"
+            className={styles.smallLinkBtn}
+            style={{ alignSelf: "flex-start" }}
+            onClick={() => {
+              setCreating(false);
+              setLink("");
+              setAddError(null);
+            }}
+          >
+            Back to search
+          </button>
         </form>
       )}
 
