@@ -23,9 +23,11 @@
 }
 
 .brandText {
-  font-size: 15px;
+  font-family: var(--font-fredoka), sans-serif;
+  font-size: 19px;
   font-weight: 600;
   color: #1c1c1a;
+  letter-spacing: -0.01em;
 }
 
 .signOutBtn {

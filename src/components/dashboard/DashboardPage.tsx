@@ -95,7 +95,7 @@ export default function DashboardPage({
         <header className={styles.header}>
           <div className={styles.headerBrand}>
             <BrandMark size={26} />
-            <span className={styles.brandText}>Linkenode</span>
+            <span className={styles.brandText}>linkenode</span>
           </div>
           <form action={signOut}>
             <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
