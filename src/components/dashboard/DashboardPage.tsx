@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import { signOut, updateWidgetSettings } from "@/app/dashboard/actions";
 import type { DirectoryEntry, Profile, WidgetSettings, WorkSample } from "@/lib/dal";
-import BrandMark from "@/components/BrandMark";
 import { DEFAULT_SETTINGS } from "./widgetStyleShared";
 import WidgetPreviewFrame from "./WidgetPreviewFrame";
 import ProfileSection from "./ProfileSection";
@@ -94,8 +93,11 @@ export default function DashboardPage({
       <div className={styles.pageShell}>
         <header className={styles.header}>
           <div className={styles.headerBrand}>
-            <BrandMark size={26} />
-            <span className={styles.brandText}>linkenode</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a
+                fixed 26px-tall header logo isn't worth next/image's
+                overhead (remote loader config, layout-shift machinery)
+                for a single static asset. */}
+            <img src="/linkenode-logo.png" alt="linkenode" width={211} height={26} />
           </div>
           <form action={signOut}>
             <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
