@@ -159,7 +159,17 @@ export default function ConnectionsSection({
       >
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            // Editing the search at all -- even while the link form is
+            // showing -- backs out of "creating" and returns to a normal
+            // name search for whatever's now typed.
+            if (creating) {
+              setCreating(false);
+              setLink("");
+              setAddError(null);
+            }
+          }}
           placeholder="Search by name"
           className={styles.input}
           style={{ width: "100%" }}
