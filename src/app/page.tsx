@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SignInButton from "@/components/SignInButton";
+import WordmarkLogo from "@/components/WordmarkLogo";
 import styles from "./page.module.css";
 
 export default async function Home() {
@@ -15,7 +16,7 @@ export default async function Home() {
 
   return (
     <div className={styles.page}>
-      <h1>Linkenode</h1>
+      <WordmarkLogo height={40} />
       <p>Sign in to manage your network and get your embed code.</p>
       <SignInButton />
     </div>

@@ -22,21 +22,6 @@
   gap: 9px;
 }
 
-.brandIcon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: #635bff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Space Mono", ui-monospace, Menlo, monospace;
-  font-weight: 700;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
 .brandText {
   font-size: 15px;
   font-weight: 600;

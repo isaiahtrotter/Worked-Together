@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { signOut, updateWidgetSettings } from "@/app/dashboard/actions";
 import type { DirectoryEntry, Profile, WidgetSettings, WorkSample } from "@/lib/dal";
+import BrandMark from "@/components/BrandMark";
 import { DEFAULT_SETTINGS } from "./widgetStyleShared";
 import WidgetPreviewFrame from "./WidgetPreviewFrame";
 import ProfileSection from "./ProfileSection";
@@ -93,7 +94,7 @@ export default function DashboardPage({
       <div className={styles.pageShell}>
         <header className={styles.header}>
           <div className={styles.headerBrand}>
-            <span className={styles.brandIcon}>L</span>
+            <BrandMark size={26} />
             <span className={styles.brandText}>Linkenode</span>
           </div>
           <form action={signOut}>
