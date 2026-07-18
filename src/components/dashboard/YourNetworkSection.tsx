@@ -50,6 +50,12 @@ export default function YourNetworkSection({
   const [query, setQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [panelState, setPanelState] = useState<PanelState>(null);
+  // Unsaved note/endorsement text, keyed by request id -- lives here rather
+  // than inside ConnectionProfilePanel so that closing it (on purpose or by
+  // an accidental click outside) never loses what was typed: the panel
+  // unmounts on close, but this survives and re-populates the fields the
+  // next time that connection's card is opened, up until it's actually saved.
+  const [drafts, setDrafts] = useState<Record<string, { note?: string; endorsement?: string }>>({});
   // placeholderId set = this is a placeholder's permanent delete (destroys
   // the profile itself); null = a real connection's removeConnection (just
   // drops the relationship, the other account is untouched).
@@ -223,6 +229,21 @@ export default function YourNetworkSection({
           <ConnectionProfilePanel
             row={panelRow}
             owner={owner}
+            draft={drafts[panelRow.request.id]}
+            onDraftChange={(patch) =>
+              setDrafts((prev) => ({
+                ...prev,
+                [panelRow.request.id]: { ...prev[panelRow.request.id], ...patch },
+              }))
+            }
+            onSaved={() =>
+              setDrafts((prev) => {
+                if (!(panelRow.request.id in prev)) return prev;
+                const next = { ...prev };
+                delete next[panelRow.request.id];
+                return next;
+              })
+            }
             onClose={startClosingPanel}
             onRequestDelete={(name) => {
               setPanelState(null);

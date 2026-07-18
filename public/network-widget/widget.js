@@ -861,7 +861,12 @@
               // an endorsement the owner wrote about a connection.
               if (d.id === "you") {
                 var endorsements = db.you.endorsements;
-                return !!(endorsements && endorsements.length > 0);
+                return (
+                  !!endorsements &&
+                  endorsements.some(function (e) {
+                    return e.text && e.text.trim();
+                  })
+                );
               }
               return !!db[d.id].endorsesOwner;
             })
@@ -971,7 +976,9 @@
           // owner" -- an owner-authored endorsement of a connection (the
           // reverse direction) intentionally shows nothing here.
           if (d.id === "you") {
-            var endorserCount = (d.endorsements || []).length;
+            var endorserCount = (d.endorsements || []).filter(function (e) {
+              return e.text && e.text.trim();
+            }).length;
             if (endorserCount > 0)
               rows +=
                 '<div class="wm-label" style="display:flex;align-items:center;gap:6px;color:#8A6100;margin-top:10px;">' +
@@ -1326,8 +1333,15 @@
           // system -- not just endorsers who happen to also be a connection
           // of whoever's widget is being viewed (see fetchEndorsementsByTarget
           // in fetchWidgetData.ts). Shown for every node, including "you".
+          // Filtered for blank text defensively -- saveEndorsement deletes
+          // the row once it's cleared back to nothing, but this guards
+          // against any endorsement saved blank before that existed (or any
+          // other path that could otherwise slip one through) rendering as
+          // an empty quote.
           var allEndorsementsHtml = "";
-          var personEndorsements = person.endorsements || [];
+          var personEndorsements = (person.endorsements || []).filter(function (e) {
+            return e.text && e.text.trim();
+          });
           if (personEndorsements.length > 0) {
             var items = personEndorsements
               .map(function (e) {
@@ -1392,7 +1406,7 @@
             icon("x", 15) +
             "</button>" +
             "</div>" +
-            '<div style="padding:14px 18px 0 18px;">' +
+            '<div style="padding:8px 18px 0 18px;">' +
             (roleLabel
               ? '<div style="margin-bottom:10px;">' +
                 '<span class="wm-label" style="color:' +
@@ -1417,9 +1431,16 @@
                 "</p>"
               : "") +
             relBlock +
+            // margin-top guarantees a minimum gap above the separator even
+            // when neither a bio nor a relationship note is rendered above
+            // it -- the name's own margin-bottom alone (3px) otherwise left
+            // it sitting almost flush against the line. Collapses with
+            // whichever preceding block's margin-bottom is larger (bio's
+            // 20px, relBlock's 18px), so cases that already had enough
+            // room are unaffected.
             '<div style="border-top:1px solid ' +
             t.border +
-            ';padding:16px 0 20px;">' +
+            ';margin-top:14px;padding:16px 0 20px;">' +
             linkRows +
             "</div>" +
             "</div>" +
@@ -1488,7 +1509,11 @@
         // from/to) rather than replacing the whole list, since the
         // dashboard only ever has the one endorsement it's currently
         // editing on hand -- not every endorsement this person has from
-        // anyone else.
+        // anyone else. Clearing it back to blank removes the entry outright
+        // (matching saveEndorsement's delete-on-empty) rather than leaving
+        // a blank one in the list -- otherwise the live preview would show
+        // an "Endorsed by" quote with nothing in it the moment the field's
+        // cleared, before the save even round-trips.
         window.__updateNetworkWidgetConnectionEndorsement = function (
           id,
           fromId,
@@ -1506,17 +1531,21 @@
               break;
             }
           }
-          var entry = {
-            id: idx >= 0 ? person.endorsements[idx].id : "local-" + fromId,
-            fromId: fromId,
-            fromName: fromName,
-            fromAvatarUrl: fromAvatarUrl,
-            text: text,
-          };
-          if (idx >= 0) {
-            person.endorsements[idx] = entry;
+          if (!text || !text.trim()) {
+            if (idx >= 0) person.endorsements.splice(idx, 1);
           } else {
-            person.endorsements.push(entry);
+            var entry = {
+              id: idx >= 0 ? person.endorsements[idx].id : "local-" + fromId,
+              fromId: fromId,
+              fromName: fromName,
+              fromAvatarUrl: fromAvatarUrl,
+              text: text,
+            };
+            if (idx >= 0) {
+              person.endorsements[idx] = entry;
+            } else {
+              person.endorsements.push(entry);
+            }
           }
 
           var node = nodes.filter(function (n) {

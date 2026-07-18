@@ -31,16 +31,24 @@ type AcceptedRow = {
 const NOTE_MAX_LENGTH = 60;
 const ENDORSEMENT_MAX_LENGTH = 1000;
 const MERGE_SEARCH_DEBOUNCE_MS = 200;
-const AUTOSAVE_DEBOUNCE_MS = 600;
 
 export default function ConnectionProfilePanel({
   row,
   owner,
+  draft,
+  onDraftChange,
+  onSaved,
   onClose,
   onRequestDelete,
 }: {
   row: AcceptedRow;
   owner: { id: string; name: string; avatar_url: string | null };
+  // Unsaved text lives in the parent (keyed by request id), not just here --
+  // this panel gets unmounted on close/hover-away, so anything typed but not
+  // saved would otherwise vanish the moment you click out by accident.
+  draft?: { note?: string; endorsement?: string };
+  onDraftChange: (patch: { note?: string; endorsement?: string }) => void;
+  onSaved: () => void;
   onClose: () => void;
   // Fires for both a real connection's "Remove connection" and a
   // placeholder's "Delete" -- the parent decides which server action to
@@ -53,10 +61,20 @@ export default function ConnectionProfilePanel({
   const { request, other, note, endorsement, mergeSuggestion, pendingMergeTarget } = row;
   const isPlaceholder = !!other && !other.user_id;
 
-  const [noteDraft, setNoteDraft] = useState(note);
-  useEffect(() => setNoteDraft(note), [note]);
-  const [endorsementDraft, setEndorsementDraft] = useState(endorsement);
-  useEffect(() => setEndorsementDraft(endorsement), [endorsement]);
+  const [noteDraft, setNoteDraft] = useState(draft?.note ?? note);
+  const [endorsementDraft, setEndorsementDraft] = useState(draft?.endorsement ?? endorsement);
+  const [saving, setSaving] = useState(false);
+  // Resyncs only when this panel starts showing a genuinely different
+  // connection (request.id changes) -- not on every note/endorsement prop
+  // change, which would otherwise clobber an in-progress edit whenever an
+  // unrelated refresh updates this same row's data while it's open.
+  useEffect(() => {
+    setNoteDraft(draft?.note ?? note);
+    setEndorsementDraft(draft?.endorsement ?? endorsement);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request.id]);
+
+  const isDirty = noteDraft !== note || (!!other && endorsementDraft !== endorsement);
 
   const [mergePickerOpen, setMergePickerOpen] = useState(false);
   const [mergeQuery, setMergeQuery] = useState("");
@@ -64,35 +82,6 @@ export default function ConnectionProfilePanel({
   const [mergeSearching, setMergeSearching] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const mergeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const noteSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const endorsementSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function scheduleNoteSave(value: string) {
-    if (noteSaveTimerRef.current) clearTimeout(noteSaveTimerRef.current);
-    noteSaveTimerRef.current = setTimeout(() => {
-      noteSaveTimerRef.current = null;
-      saveConnectionNote(request.id, value)
-        .then(() => {
-          toast("Saved");
-          router.refresh();
-        })
-        .catch(() => toast("Couldn't save — try again"));
-    }, AUTOSAVE_DEBOUNCE_MS);
-  }
-
-  function scheduleEndorsementSave(value: string) {
-    if (!other) return;
-    if (endorsementSaveTimerRef.current) clearTimeout(endorsementSaveTimerRef.current);
-    endorsementSaveTimerRef.current = setTimeout(() => {
-      endorsementSaveTimerRef.current = null;
-      saveEndorsement(other.id, value)
-        .then(() => {
-          toast("Saved");
-          router.refresh();
-        })
-        .catch(() => toast("Couldn't save — try again"));
-    }, AUTOSAVE_DEBOUNCE_MS);
-  }
 
   useEffect(() => {
     if (mergeDebounceRef.current) clearTimeout(mergeDebounceRef.current);
@@ -113,41 +102,31 @@ export default function ConnectionProfilePanel({
     };
   }, [mergeQuery]);
 
-  // Closing shouldn't lose whatever's mid-debounce -- flush it immediately
-  // rather than waiting for the timer (which would fire after the panel's
-  // already gone).
-  function handleClose() {
-    if (noteSaveTimerRef.current) {
-      clearTimeout(noteSaveTimerRef.current);
-      noteSaveTimerRef.current = null;
-      if (noteDraft !== note) {
-        saveConnectionNote(request.id, noteDraft)
-          .then(() => router.refresh())
-          .catch(() => toast("Couldn't save — try again"));
-      }
-    }
-    if (endorsementSaveTimerRef.current) {
-      clearTimeout(endorsementSaveTimerRef.current);
-      endorsementSaveTimerRef.current = null;
-      if (other && endorsementDraft !== endorsement) {
-        saveEndorsement(other.id, endorsementDraft)
-          .then(() => router.refresh())
-          .catch(() => toast("Couldn't save — try again"));
-      }
-    }
-    onClose();
-  }
-
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") onClose();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleClose closes
-    // over noteDraft/endorsementDraft/note/endorsement, all already current
-    // each render; re-binding this listener every keystroke isn't needed.
-  }, []);
+  }, [onClose]);
+
+  async function handleSave() {
+    if (!isDirty) return;
+    setSaving(true);
+    try {
+      const tasks: Promise<unknown>[] = [];
+      if (noteDraft !== note) tasks.push(saveConnectionNote(request.id, noteDraft));
+      if (other && endorsementDraft !== endorsement) tasks.push(saveEndorsement(other.id, endorsementDraft));
+      await Promise.all(tasks);
+      toast("Saved");
+      onSaved();
+      router.refresh();
+    } catch {
+      toast("Couldn't save — try again");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function openMergePicker() {
     setMergePickerOpen(true);
@@ -200,7 +179,7 @@ export default function ConnectionProfilePanel({
         <button
           type="button"
           className={styles.profileDialogCloseBtn}
-          onClick={handleClose}
+          onClick={onClose}
           aria-label="Close"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -224,7 +203,7 @@ export default function ConnectionProfilePanel({
               onChange={(e) => {
                 setNoteDraft(e.target.value);
                 if (other) updateConnectionPreview(other.id, { relationship: e.target.value });
-                scheduleNoteSave(e.target.value);
+                onDraftChange({ note: e.target.value });
               }}
             />
             <span className={styles.inputCounter}>
@@ -252,7 +231,7 @@ export default function ConnectionProfilePanel({
                     owner.avatar_url,
                     e.target.value,
                   );
-                  scheduleEndorsementSave(e.target.value);
+                  onDraftChange({ endorsement: e.target.value });
                 }}
               />
               <span className={styles.inputCounter}>
@@ -261,6 +240,15 @@ export default function ConnectionProfilePanel({
             </div>
           </div>
         )}
+
+        <button
+          type="button"
+          className={styles.saveButton}
+          disabled={!isDirty || saving}
+          onClick={handleSave}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
       </div>
 
       {!isPlaceholder && other && (

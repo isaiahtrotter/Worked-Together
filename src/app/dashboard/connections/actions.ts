@@ -180,6 +180,23 @@ export async function saveEndorsement(toProfileId: string, text: string) {
   if (!me) throw new Error("Profile not found.");
 
   const supabase = await createClient();
+
+  // Clearing a recommendation back to nothing should remove the
+  // relationship entirely -- upserting empty text instead would leave a
+  // real row behind, which every reader (the widget's "Endorsed by" list,
+  // the endorsesOwner badge) treats as "an endorsement exists," rendering
+  // as a blank quote rather than showing no endorsement at all.
+  if (!text.trim()) {
+    const { error } = await supabase
+      .from("endorsements")
+      .delete()
+      .eq("from_profile_id", me.id)
+      .eq("to_profile_id", toProfileId);
+    if (error) throw error;
+    revalidatePath("/dashboard");
+    return;
+  }
+
   const { error } = await supabase
     .from("endorsements")
     .upsert(
