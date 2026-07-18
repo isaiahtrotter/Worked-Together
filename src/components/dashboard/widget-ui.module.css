@@ -146,7 +146,7 @@
      styling on the button you just clicked away from. */
   outline: 1px solid transparent;
   outline-offset: -1px;
-  transition: outline-color 0.15s ease;
+  transition: outline-color 0.15s ease, filter 0.15s ease;
   line-height: 0;
 }
 
@@ -157,7 +157,7 @@
 }
 
 .cornerOption:hover {
-  outline-color: rgba(0, 0, 0, 0.25);
+  filter: brightness(0.92);
 }
 
 .cornerOptionActive,

@@ -62,8 +62,8 @@ function CornerGraphic({ corner }: { corner: Corner }) {
   const buttonX = corner === "bottom-left" ? 10 : 335;
   return (
     <svg viewBox="0 0 402 270" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1" y="1" width="400" height="268" rx="8" fill="white" />
-      <rect x="1" y="1" width="400" height="268" rx="8" stroke="#E5E5E5" strokeWidth="2" />
+      <rect x="1" y="1" width="400" height="268" rx="10" fill="white" />
+      <rect x="1" y="1" width="400" height="268" rx="10" stroke="#E5E5E5" strokeWidth="2" />
       <rect y="176" width="112" height="94" fill="#E5E5E5" />
       <rect y="45" width="112" height="128" fill="#E5E5E5" />
       <rect x="115" y="45" width="287" height="225" fill="#E5E5E5" />
