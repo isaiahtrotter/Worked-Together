@@ -58,9 +58,23 @@ function pickByPreference(tags: Map<string, string>, namesInPreferenceOrder: str
 // suffix so the detected name is just the name.
 const TWITTER_TITLE_SUFFIX_REGEX = /\s*\(@[A-Za-z0-9_]+\)\s*(?:on\s+X|\/\s*(?:X|Twitter))\s*$/i;
 
+// LinkedIn's og:title on profile pages is "{Name} - {Headline} | LinkedIn"
+// (or just "{Name} | LinkedIn" when the profile has no headline) — strip
+// the trailing platform suffix, then the headline, so only the name is
+// left. The headline strip only ever runs once the suffix has confirmed
+// this really is a LinkedIn title, so an unrelated title that happens to
+// contain " - " (a Dribbble shot called "Jane Doe - Logo design", say) is
+// never touched.
+const LINKEDIN_SUFFIX_REGEX = /\s*\|\s*linkedin\s*$/i;
+const LINKEDIN_HEADLINE_REGEX = /\s+-\s+.+$/;
+
 function cleanDetectedName(name: string | null): string | null {
   if (!name) return name;
-  return name.replace(TWITTER_TITLE_SUFFIX_REGEX, "").trim() || null;
+  let cleaned = name.replace(TWITTER_TITLE_SUFFIX_REGEX, "");
+  if (LINKEDIN_SUFFIX_REGEX.test(cleaned)) {
+    cleaned = cleaned.replace(LINKEDIN_SUFFIX_REGEX, "").replace(LINKEDIN_HEADLINE_REGEX, "");
+  }
+  return cleaned.trim() || null;
 }
 
 // Some sites' og:image is the person's actual profile photo (GitHub,
