@@ -4,13 +4,29 @@
   min-height: 0;
   display: flex;
   align-items: center;
+  /* Single source of truth for the laptop's rendered width/left edge,
+     reused by .laptopStage's own width below and by .leftCol's margin --
+     derived from .laptopStage's own right:-13vw bleed (see its comment):
+     right edge sits at 113vw (100vw containing-block width + 13vw bleed),
+     so left edge is 113vw minus its width. */
+  --laptop-w: min(70vw, calc(80vh * 1.74785));
+  --laptop-left: calc(113vw - var(--laptop-w));
+  --text-w: min(430px, 40vw);
 }
 
 .leftCol {
   position: relative;
   z-index: 2;
-  width: min(430px, 40vw);
-  margin-left: clamp(32px, 6vw, 80px);
+  width: var(--text-w);
+  /* On very wide/short-ish windows, the laptop (capped by --laptop-w) stops
+     growing well before the text column's own fixed-ish width does,
+     opening a lopsided gap between them. Past a point, center the text in
+     the space between the browser's left edge and the laptop's left edge
+     instead of leaving it pinned near the edge -- max() keeps the original
+     clamp (the near-edge margin that already looks right at normal desktop
+     widths) as a floor, only switching to the centering formula once it
+     would call for more margin than that. */
+  margin-left: max(clamp(32px, 6vw, 80px), calc((var(--laptop-left) - var(--text-w)) / 2));
   flex-shrink: 0;
   animation: textEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.15s;
@@ -197,7 +213,7 @@
   position: absolute;
   right: -13vw;
   top: 50%;
-  width: min(70vw, calc(80vh * 1.74785));
+  width: var(--laptop-w);
   /* Permanent centering. Deliberately a plain (non-animated) declaration --
      see .laptopStageEntering below for why the entrance slide can't just
      live here via animation-fill-mode. */
@@ -377,7 +393,7 @@
     gap: 8px;
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px;
     z-index: 20;
     padding: 9px 13px;
     border-radius: 10px;
