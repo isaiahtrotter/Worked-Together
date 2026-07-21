@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import SignInButton from "@/components/SignInButton";
 import NetworkWidget from "@/components/NetworkWidget";
 import { LauncherIcon } from "@/components/dashboard/widgetStyleShared";
@@ -40,6 +41,38 @@ function openOnDesktop() {
 }
 
 export default function MarketingHero() {
+  // Dropped once the entrance animation finishes (rather than left
+  // attached via animation-fill-mode) -- see .laptopStageEntering's comment
+  // in MarketingHero.module.css for why a still-"filling" animation keeps
+  // this element confining the widget even on mobile, where it needs to
+  // truly have no transform at all once it settles.
+  const [laptopEntering, setLaptopEntering] = useState(true);
+
+  // Once open on mobile, the panel spans the full page width and its own
+  // "Made with Linkenode" link sits right where .mobileTrigger lives,
+  // blocking clicks to it -- hide the trigger while expanded (the panel
+  // already has its own close button) by watching #widget-root's class
+  // directly, since it can also change via the outside-click collapse
+  // handler, not just our own toggleDemo calls.
+  const [widgetExpanded, setWidgetExpanded] = useState(false);
+
+  // Stable identity is required here, not just nice-to-have: NetworkWidget's
+  // effect (which fetches data, injects the engine script, and calls
+  // __initNetworkWidget) has onReady in its dependency array. A new
+  // function reference -- e.g. from this component re-rendering because
+  // widgetExpanded changed -- reruns that effect, and its cleanup sets a
+  // `cancelled` flag the in-flight fetch/import Promise.all checks before
+  // calling __initNetworkWidget. Mid-flight, that silently aborts
+  // initialization forever (the widget never becomes ready at all).
+  const handleWidgetReady = useCallback(() => {
+    openOnDesktop();
+    const root = document.getElementById("widget-root");
+    if (!root) return;
+    const sync = () => setWidgetExpanded(root.classList.contains("expanded"));
+    sync();
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["class"] });
+  }, []);
+
   return (
     <div className={styles.hero}>
       <div className={styles.leftCol}>
@@ -87,14 +120,26 @@ export default function MarketingHero() {
         </div>
       </div>
 
-      <div className={styles.laptopStage}>
+      <div
+        className={`${styles.laptopStage} ${laptopEntering ? styles.laptopStageEntering : ""}`}
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget) setLaptopEntering(false);
+        }}
+      >
         <div className={styles.laptop}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- this is
-              the user-provided laptop mockup asset (public/laptop-mockup.png),
-              used exactly as given rather than recreated; next/image's
-              remote-loader machinery isn't worth it for one static hero
-              asset. */}
-          <img src="/laptop-mockup.png" alt="" className={styles.laptopImg} />
+          {/* eslint-disable-next-line @next/next/no-img-element -- these are
+              user-provided mockup assets (public/laptop-mockup*.png), used
+              exactly as given rather than recreated; next/image's
+              remote-loader machinery isn't worth it for static hero assets.
+              The mobile source swaps in below the same breakpoint the
+              stacked layout kicks in at -- on mobile the widget now opens on
+              the real page (see .widgetHost's mobile override) rather than
+              confined to this image, so its "screen" no longer needs to
+              show a functional collapsed-pill state. */}
+          <picture>
+            <source media="(max-width: 1200px)" srcSet="/laptop-mockup-mobile.png" />
+            <img src="/laptop-mockup.png" alt="" className={styles.laptopImg} />
+          </picture>
 
           {/* Positioned to match the screen region measured directly out of
               laptop-mockup.png (1220x698 source): left 10.74%, top 2.44%,
@@ -106,7 +151,7 @@ export default function MarketingHero() {
               embedKey="demo"
               mode="floating"
               demoData={DEMO_WIDGET_DATA}
-              onReady={openOnDesktop}
+              onReady={handleWidgetReady}
             />
           </div>
         </div>
@@ -115,16 +160,19 @@ export default function MarketingHero() {
       {/* Stand-in for the widget's own launcher pill on mobile/tablet (that
           pill is hidden there via CSS -- it's confined to the shrunk laptop
           screen and too small to comfortably tap). Fixed to the real page
-          instead, dispatching the same toggle event. */}
-      <button
-        type="button"
-        className={styles.mobileTrigger}
-        onClick={toggleDemo}
-        data-network-widget-open
-      >
-        <LauncherIcon />
-        <span>View My Network</span>
-      </button>
+          instead, dispatching the same toggle event. Hidden once expanded --
+          see widgetExpanded above. */}
+      {!widgetExpanded && (
+        <button
+          type="button"
+          className={styles.mobileTrigger}
+          onClick={toggleDemo}
+          data-network-widget-open
+        >
+          <LauncherIcon />
+          <span>View My Network</span>
+        </button>
+      )}
     </div>
   );
 }

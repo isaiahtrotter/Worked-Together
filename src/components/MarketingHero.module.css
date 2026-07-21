@@ -198,6 +198,26 @@
   right: -13vw;
   top: 50%;
   width: min(70vw, calc(80vh * 1.74785));
+  /* Permanent centering. Deliberately a plain (non-animated) declaration --
+     see .laptopStageEntering below for why the entrance slide can't just
+     live here via animation-fill-mode. */
+  transform: translateY(-50%);
+}
+
+/* Applied only while the entrance animation plays, then removed via JS
+   (MarketingHero.tsx's onAnimationEnd) rather than left with
+   animation-fill-mode:both. A CSS animation that's still "filling" keeps
+   resolving getComputedStyle(...).transform to a concrete matrix even if
+   the final keyframe says transform:none -- it's never literally the
+   keyword none while the animation is attached, which still establishes a
+   containing block for position:fixed descendants (the real widget engine
+   nested inside). On desktop that's harmless (the base rule above already
+   holds a permanent transform for centering, so nothing changes once this
+   class is removed), but on mobile .laptopStage has no static transform at
+   all -- removing this class there is what lets #widget-root's
+   position:fixed truly escape to the real page instead of staying
+   confined to this element. */
+.laptopStageEntering {
   animation: laptopEnter 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.1s;
 }
@@ -250,9 +270,19 @@
    zoom shrinks the whole rendered box uniformly (radius, shadow, padding,
    font sizes, everything) so it's proportioned exactly like the full-size
    widget, just smaller -- unlike transform:scale, it doesn't fight the
-   engine's own open/close transform animation on this same element. */
+   engine's own open/close transform animation on this same element.
+   0.88 is the target ("zoom in more"), but .widgetHost's own size tracks
+   the laptop image (min(70vw, 80vh-equivalent)), so a flat 0.88 would
+   overflow it at the narrow edge of the desktop breakpoint range (a fixed
+   0.74 was the largest flat value that stayed safe all the way down to
+   1201px). Instead, mirror .laptopStage's own min() formula here: cap at
+   0.88, but fall back to whichever of a vw- or vh-derived safe ceiling is
+   tighter (dividing by 1px converts the length to the unitless number zoom
+   needs). Coefficients back-derived from .widgetHost's own measured
+   height (~0.35 * viewport width, or ~0.7 * viewport height when a short
+   window makes that the tighter constraint) with roughly 10% headroom. */
 .widgetHost :global(.panel-expanded) {
-  zoom: 0.74;
+  zoom: min(0.88, calc(0.056vw / 1px), calc(0.11vh / 1px));
 }
 
 /* Mobile/tablet: laptop mockup moves above the heading, fully contained (no
@@ -283,11 +313,59 @@
     width: min(420px, 100%);
     margin: 0 auto 12px;
     order: 1;
+    /* Cancels the desktop rule's permanent translateY(-50%) -- mobile needs
+       zero static transform so, once .laptopStageEntering below is removed,
+       this element truly has no transform at all. */
+    transform: none;
+  }
+
+  .laptopStageEntering {
     animation: laptopEnterMobile 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* On mobile the widget should open on the real page, not confined inside
+     the tiny laptop screen -- dropping the transform means #widget-root's
+     position:fixed no longer has a transformed ancestor to treat as its
+     containing block, so it escapes back to the real viewport exactly like
+     a normal embed would. */
+  .widgetHost {
+    transform: none;
+  }
+
+  /* Normal floating-embed sizing, just with height fixed to 50% of the
+     viewport instead of the engine's own mobile default (calc(100vh-32px)).
+     Two things this has to work around:
+     1. #widget-root itself always carries transform:translateY(0) once
+        ready (its own fade-up reveal, .wt-ready in widget.css) -- a
+        translate of 0 is still a non-none transform, so #widget-root is
+        ALWAYS the containing block for its position:fixed children. This
+        never mattered before because every size the engine ever used here
+        was a fixed pixel value (460px/560px), which doesn't care about its
+        containing block's size -- only a percentage would, and width:100%
+        was the first one, resolving against #widget-root's own 0x0 box
+        instead of the real viewport. vw/vh are immune to this (same reason
+        the engine's own @media(max-width:480px) rule below can use 100vw
+        against our confined desktop layout), so width uses vw, not %.
+     2. #widget-root itself sits inset 24px from the real corner
+        (corner-bottom-left's own bottom:24px;left:24px), so this element's
+        left/bottom offsets -- resolving against that inset containing
+        block -- need their own -24px to land flush with the true viewport
+        edges instead of 24px short of them.
+     The engine's own @media(max-width:480px) rule also sets left/right/
+     width/bottom/top on this same element (ID in its selector, needing
+     !important here to win regardless of source order). */
   .widgetHost :global(.panel-expanded) {
-    zoom: 0.6;
+    /* The base rule's desktop zoom formula is still in effect here too
+       (same selector, no breakpoint of its own) and evaluates to something
+       tiny at phone-width viewports -- reset to full, real size. */
+    zoom: 1;
+    position: fixed !important;
+    left: -24px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: -24px !important;
+    width: 100vw !important;
+    height: 50vh !important;
   }
 
   /* The real launcher pill lives inside the shrunk mockup screen and is too
@@ -295,28 +373,6 @@
      .mobileTrigger, a full-size fixed button floating over the page. */
   .widgetHost :global(.launcher) {
     display: none !important;
-  }
-}
-
-/* The engine's own @media(max-width:480px) rule (widget.css) makes the
-   panel go full-viewport (position:fixed, 100vw, calc(100vh - 32px)) --
-   correct for a real embed opened on an actual phone, but our own page is
-   itself responsive down to phone widths, so this fires here too and blows
-   the panel up far past .widgetHost's confines (100vw/100vh are true
-   viewport units, immune to the transformed-ancestor confinement trick).
-   Restore the plain desktop corner-bottom-left geometry so zoom is the only
-   thing scaling it down. Its selectors carry an ID, so matching specificity
-   here needs !important to win regardless of source order. */
-@media (max-width: 480px) {
-  .widgetHost :global(.panel-expanded) {
-    position: absolute !important;
-    left: 0 !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: 0 !important;
-    width: 460px !important;
-    height: 560px !important;
-    border-radius: var(--wt-radius, 24px) !important;
   }
 }
 
