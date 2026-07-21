@@ -54,20 +54,22 @@ const ACCENT = {
   ivy: "#B7C42E",
 };
 
+// Fixed filename order (1, 2, 3, 4) -- every connection's Nth work sample
+// uses SAMPLE_SVGS[N-1], always, never a random pick. SAMPLE_SVGS[1] (index
+// 1, "2 (gif).svg") carries its own baked-in <animate> pulse regardless of
+// who uses it; only Ivy's instance is additionally tagged asGif so the
+// widget shows a "GIF" badge on hers specifically (see connections below).
 const SAMPLE_SVGS = [
   // Desktop/1.svg
   `<svg width="387" height="261" viewBox="0 0 387 261" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_327_2)"><rect width="387" height="261" fill="#BCBCBC"/><circle cx="274" cy="88" r="113" fill="#393939"/><rect x="-9" y="158" width="457" height="157" fill="#686868"/></g><defs><clipPath id="clip0_327_2"><rect width="387" height="261" fill="white"/></clipPath></defs></svg>`,
+  // Desktop/2 (gif).svg -- subtle opacity pulse on the circle via native SVG
+  // <animate>, a small, real (if tiny) moving image, not just a static
+  // frame wearing a ".gif" label.
+  `<svg width="387" height="261" viewBox="0 0 387 261" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="387" height="261" fill="#393939"/><rect x="20" y="24" width="74" height="74" fill="#686868"/><circle cx="194" cy="143" r="82" fill="#BCBCBC"><animate attributeName="opacity" values="1;0.55;1" dur="2.4s" repeatCount="indefinite"/></circle></svg>`,
   // Desktop/3.svg
   `<svg width="387" height="261" viewBox="0 0 387 261" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="387" height="261" fill="#393939"/><rect x="61" y="45" width="119" height="136" fill="#BCBCBC"/><rect x="204" y="80" width="119" height="136" fill="#BCBCBC"/></svg>`,
   // Desktop/4.svg
   `<svg width="387" height="261" viewBox="0 0 387 261" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="387" height="261" fill="#686868"/><rect y="48" width="123" height="166" fill="#BCBCBC"/><rect x="132" y="48" width="123" height="166" fill="#BCBCBC"/><rect x="264" y="48" width="123" height="166" fill="#BCBCBC"/></svg>`,
-  // Desktop/2 (gif).svg -- the one designated to animate. Reserved for Ivy
-  // only (see connections below), tagged with the #a.gif fragment wherever
-  // it's used so the widget shows its "GIF" badge, so the animation is
-  // never shown without that label elsewhere. Subtle opacity pulse on the
-  // circle -- a small, real (if tiny) moving image, not just a static frame
-  // wearing a ".gif" label.
-  `<svg width="387" height="261" viewBox="0 0 387 261" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="387" height="261" fill="#393939"/><rect x="20" y="24" width="74" height="74" fill="#686868"/><circle cx="194" cy="143" r="82" fill="#BCBCBC"><animate attributeName="opacity" values="1;0.55;1" dur="2.4s" repeatCount="indefinite"/></circle></svg>`,
 ];
 
 function workSample(
@@ -142,7 +144,7 @@ export const DEMO_WIDGET_DATA = {
       relationship: "I worked with Sam on the component library at Vercel.",
       endorsesOwner: true,
       endorsements: [],
-      workSamples: [workSample("w4", 2, ACCENT.sam)],
+      workSamples: [workSample("w4", 0, ACCENT.sam), workSample("w5", 1, ACCENT.sam)],
     },
     {
       id: "priya",
@@ -157,7 +159,7 @@ export const DEMO_WIDGET_DATA = {
         workSample("w6", 0, ACCENT.priya),
         workSample("w7", 1, ACCENT.priya),
         workSample("w8", 2, ACCENT.priya),
-        workSample("w9", 0, ACCENT.priya),
+        workSample("w9", 3, ACCENT.priya),
       ],
     },
     {
@@ -169,7 +171,7 @@ export const DEMO_WIDGET_DATA = {
       relationship: "I worked with Leo on usability studies at Linear.",
       endorsesOwner: true,
       endorsements: [],
-      workSamples: [workSample("w10", 1, ACCENT.leo)],
+      workSamples: [workSample("w10", 0, ACCENT.leo), workSample("w14", 1, ACCENT.leo)],
     },
     {
       id: "ava",
@@ -181,9 +183,9 @@ export const DEMO_WIDGET_DATA = {
       endorsesOwner: false,
       endorsements: [],
       workSamples: [
-        workSample("w11", 2, ACCENT.ava),
-        workSample("w12", 0, ACCENT.ava),
-        workSample("w13", 1, ACCENT.ava),
+        workSample("w11", 0, ACCENT.ava),
+        workSample("w12", 1, ACCENT.ava),
+        workSample("w13", 2, ACCENT.ava),
       ],
     },
     {
@@ -196,10 +198,10 @@ export const DEMO_WIDGET_DATA = {
       endorsesOwner: true,
       endorsements: [],
       workSamples: [
-        workSample("w16", 3, ACCENT.ivy, true),
-        workSample("w17", 0, ACCENT.ivy),
-        workSample("w18", 1, ACCENT.ivy),
-        workSample("w19", 2, ACCENT.ivy),
+        workSample("w16", 0, ACCENT.ivy),
+        workSample("w17", 1, ACCENT.ivy, true),
+        workSample("w18", 2, ACCENT.ivy),
+        workSample("w19", 3, ACCENT.ivy),
       ],
     },
   ],
