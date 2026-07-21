@@ -21,6 +21,30 @@
   align-items: center;
 }
 
+/* Deliberately tiny and out of the way -- a quiet escape hatch, not a
+   prominent "Danger Zone" card, since account deletion isn't something to
+   draw attention to. Fixed so it stays put regardless of scroll position. */
+.deleteAccountCorner {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #b4b4b8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+  z-index: 10;
+}
+
+.deleteAccountCorner:hover {
+  color: #d64545;
+}
+
 .signOutBtn {
   display: flex;
   align-items: center;

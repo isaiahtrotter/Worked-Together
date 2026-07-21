@@ -5,7 +5,7 @@ import { deleteAccount } from "@/app/dashboard/actions";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
 import posthog from "@/lib/posthog";
-import styles from "./widget-ui.module.css";
+import styles from "./dashboard-page.module.css";
 
 export default function DeleteAccountSection({ profileName }: { profileName: string }) {
   const toast = useToast();
@@ -30,14 +30,10 @@ export default function DeleteAccountSection({ profileName }: { profileName: str
   }
 
   return (
-    <div className={styles.card}>
-      <p className={styles.hint} style={{ margin: "0 0 12px" }}>
-        Permanently delete your account, profile, connections, endorsements, and work samples.
-        This can&apos;t be undone.
-      </p>
+    <>
       <button
         type="button"
-        className={styles.btnDanger}
+        className={styles.deleteAccountCorner}
         onClick={() => setConfirmOpen(true)}
         disabled={deleting}
       >
@@ -52,6 +48,6 @@ export default function DeleteAccountSection({ profileName }: { profileName: str
         onConfirm={handleConfirm}
         onCancel={() => setConfirmOpen(false)}
       />
-    </div>
+    </>
   );
 }
