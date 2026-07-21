@@ -104,33 +104,20 @@ export default function MarketingHero() {
 
       <div className={styles.laptopStage}>
         <div className={styles.laptop}>
-          <div className={styles.screenOuter}>
-            <div className={styles.camera} />
-            <div className={styles.screenInner}>
-              <div className={styles.portfolioNav}>
-                <div className={styles.navAvatar} />
-                <div className={styles.navLinks}>
-                  <div className={styles.navPill} />
-                  <div className={styles.navPill} />
-                  <div className={styles.navPill} />
-                </div>
-              </div>
-              <div className={styles.titlePill} />
-              <div className={styles.heroBlock} />
-              <div className={styles.gridRow}>
-                <div className={styles.blobShape} />
-                <div className={styles.circleShape} />
-                <div className={styles.rectShape} />
-              </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- this is
+              the user-provided laptop mockup asset (public/laptop-mockup.png),
+              used exactly as given rather than recreated; next/image's
+              remote-loader machinery isn't worth it for one static hero
+              asset. */}
+          <img src="/laptop-mockup.png" alt="" className={styles.laptopImg} />
 
-              <div className={styles.widgetHost}>
-                <NetworkWidget embedKey="demo" mode="floating" demoData={DEMO_WIDGET_DATA} />
-              </div>
-            </div>
-          </div>
-          <p className={styles.hingeLabel}>MacBook Pro</p>
-          <div className={styles.deck}>
-            <div className={styles.notch} />
+          {/* Positioned to match the screen region measured directly out of
+              laptop-mockup.png (1220x698 source): left 10.74%, top 2.44%,
+              width 79.18%, height 87.39% -- so the real widget's launcher
+              pill and expanded panel land exactly on the screen, not
+              floating over the aluminum bezel. */}
+          <div className={styles.widgetHost}>
+            <NetworkWidget embedKey="demo" mode="floating" demoData={DEMO_WIDGET_DATA} />
           </div>
         </div>
       </div>
