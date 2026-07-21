@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
+import posthog from "@/lib/posthog";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 
@@ -67,6 +68,14 @@ export default function SignInButton() {
         client_id: GOOGLE_CLIENT_ID,
         nonce: hashedNonce,
         callback: async (response) => {
+          // Earliest point this flow is observable from our own JS: Google's
+          // renderButton() renders inside a cross-origin iframe, so a click
+          // on the actual button never reaches this page's event listeners
+          // at all (a hard browser restriction, not something to work
+          // around) -- this callback, right as Google hands back a
+          // credential, is as early as "signup_started" can fire.
+          posthog.capture("signup_started");
+
           const { error: signInError } = await supabase.auth.signInWithIdToken({
             provider: "google",
             token: response.credential,

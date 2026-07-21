@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Gabarito } from "next/font/google";
+import PostHogInit from "@/components/PostHogInit";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,7 +48,10 @@ export default function RootLayout({
         />
         <link rel="stylesheet" href="/network-widget/widget.css" />
       </head>
-      <body>{children}</body>
+      <body>
+        <PostHogInit />
+        {children}
+      </body>
     </html>
   );
 }

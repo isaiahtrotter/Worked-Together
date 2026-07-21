@@ -11,6 +11,7 @@ import {
   addPlaceholderConnection,
   type SearchResult,
 } from "@/app/dashboard/connections/actions";
+import posthog from "@/lib/posthog";
 import styles from "./widget-ui.module.css";
 
 type OtherProfile = { id: string; name: string; avatar_url: string | null } | undefined;
@@ -93,12 +94,14 @@ export default function ConnectionsSection({
     setResults((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: "pending_outgoing" } : r)),
     );
-    sendConnectionRequest(id).catch((err) => {
-      setResults((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: "not_connected" } : r)),
-      );
-      setActionError(err instanceof Error ? err.message : "Couldn't send request.");
-    });
+    sendConnectionRequest(id)
+      .then(() => posthog.capture("connection_added", { matched_existing_user: true }))
+      .catch((err) => {
+        setResults((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: "not_connected" } : r)),
+        );
+        setActionError(err instanceof Error ? err.message : "Couldn't send request.");
+      });
   }
 
   function handleAccept(requestId: string) {
@@ -138,6 +141,7 @@ export default function ConnectionsSection({
       return;
     }
 
+    posthog.capture("connection_added", { matched_existing_user: false });
     setLink("");
     setQuery("");
     setCreating(false);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { sendConnectionRequest } from "@/app/dashboard/connections/actions";
 import type { DirectoryEntry } from "@/lib/dal";
+import posthog from "@/lib/posthog";
 import styles from "./widget-ui.module.css";
 
 export default function NetworkDirectory({
@@ -17,12 +18,14 @@ export default function NetworkDirectory({
     setDirectory((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "pending_outgoing" } : p)),
     );
-    sendConnectionRequest(id).catch((err) => {
-      setDirectory((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "not_connected" } : p)),
-      );
-      setError(err instanceof Error ? err.message : "Couldn't send request.");
-    });
+    sendConnectionRequest(id)
+      .then(() => posthog.capture("connection_added", { matched_existing_user: true }))
+      .catch((err) => {
+        setDirectory((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: "not_connected" } : p)),
+        );
+        setError(err instanceof Error ? err.message : "Couldn't send request.");
+      });
   }
 
   return (

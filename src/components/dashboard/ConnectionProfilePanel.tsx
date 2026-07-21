@@ -13,6 +13,7 @@ import {
 import { MiniAvatar } from "./ConnectionsSection";
 import { useToast } from "./ToastProvider";
 import { updateConnectionEndorsementPreview, updateConnectionPreview } from "@/lib/widgetLiveUpdate";
+import posthog from "@/lib/posthog";
 import styles from "./widget-ui.module.css";
 
 type OtherProfile =
@@ -116,8 +117,14 @@ export default function ConnectionProfilePanel({
     try {
       const tasks: Promise<unknown>[] = [];
       if (noteDraft !== note) tasks.push(saveConnectionNote(request.id, noteDraft));
+      // First write only: saveEndorsement also handles editing an existing
+      // recommendation (and clearing one back to empty) via the same
+      // upsert -- only count it as "written" the first time this
+      // connection goes from no recommendation to having one.
+      const isFirstRecommendation = !endorsement.trim() && endorsementDraft.trim().length > 0;
       if (other && endorsementDraft !== endorsement) tasks.push(saveEndorsement(other.id, endorsementDraft));
       await Promise.all(tasks);
+      if (isFirstRecommendation) posthog.capture("recommendation_written");
       toast("Saved");
       onSaved();
       router.refresh();

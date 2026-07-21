@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import NetworkWidget from "@/components/NetworkWidget";
 import { BUTTON_LABEL_MAX_LENGTH, DEFAULT_SETTINGS, LauncherIcon } from "./widgetStyleShared";
 import { useToast } from "./ToastProvider";
+import posthog from "@/lib/posthog";
 import styles from "./widget-ui.module.css";
 
 type Corner = "bottom-right" | "bottom-left";
@@ -124,6 +125,7 @@ export default function WidgetPreviewFrame({
 
   function copy() {
     navigator.clipboard.writeText(snippet);
+    posthog.capture("embed_code_copied");
     // The mouse is almost always still over the snippet right after a
     // click -- drive the overlay off explicit hover state (not CSS :hover)
     // so "Copied to clipboard" fades all the way to nothing instead of

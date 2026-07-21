@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut, updateWidgetSettings } from "@/app/dashboard/actions";
 import type { DirectoryEntry, Profile, WidgetSettings, WorkSample } from "@/lib/dal";
+import posthog from "@/lib/posthog";
 import { DEFAULT_SETTINGS } from "./widgetStyleShared";
 import WidgetPreviewFrame from "./WidgetPreviewFrame";
 import ProfileSection from "./ProfileSection";
@@ -26,6 +27,8 @@ export default function DashboardPage({
   profile,
   workSamples,
   connections,
+  email,
+  isNewSignup,
 }: {
   profile: Profile;
   workSamples: WorkSample[];
@@ -34,7 +37,23 @@ export default function DashboardPage({
   // network" directory is hidden for now (see YourNetworkSection instead),
   // kept in the prop list so it's a one-line change to bring back.
   directory?: DirectoryEntry[];
+  email: string | null;
+  isNewSignup: boolean;
 }) {
+  // Runs on every dashboard load, new signup or returning session alike --
+  // identify() is idempotent and cheap, and this is the one place both
+  // cases are guaranteed to pass through (unlike the sign-in button, which
+  // a returning user with a persisted session never clicks again).
+  // signup_completed only fires the first time, right after identify() so
+  // it lands attached to the person rather than anonymous.
+  useEffect(() => {
+    posthog.identify(profile.id, { email, name: profile.name });
+    if (isNewSignup) posthog.capture("signup_completed");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once per
+    // mount only; re-identifying on every unrelated re-render is pointless.
+  }, []);
+
+
   // Merge field-by-field rather than initialSettings ?? DEFAULT_SETTINGS —
   // existing profiles saved their widget_settings under an older schema
   // (missing newer fields entirely), so an all-or-nothing fallback leaves
@@ -99,7 +118,7 @@ export default function DashboardPage({
                 for a single static asset. */}
             <img src="/linkenode-logo.png" alt="linkenode" width={130} height={16} />
           </div>
-          <form action={signOut}>
+          <form action={signOut} onSubmit={() => posthog.reset()}>
             <button type="submit" className={styles.signOutBtn} aria-label="Sign out">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

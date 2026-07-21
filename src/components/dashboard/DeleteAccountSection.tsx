@@ -4,6 +4,7 @@ import { useState } from "react";
 import { deleteAccount } from "@/app/dashboard/actions";
 import ConfirmDialog from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
+import posthog from "@/lib/posthog";
 import styles from "./widget-ui.module.css";
 
 export default function DeleteAccountSection({ profileName }: { profileName: string }) {
@@ -15,6 +16,7 @@ export default function DeleteAccountSection({ profileName }: { profileName: str
     setDeleting(true);
     deleteAccount()
       .then(() => {
+        posthog.reset();
         // Hard navigation, not router.push -- the session and every bit of
         // this account's data are gone, so a clean reload beats carrying
         // forward any client-side cache/state from the old one.
