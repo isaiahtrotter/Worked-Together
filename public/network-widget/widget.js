@@ -86,9 +86,10 @@
         } else {
           if (addOwnerBtnEl) addOwnerBtnEl.href = loginUrl;
           if (shareNetworkBtnEl) {
-            // Always the marketing site, regardless of which app instance
-            // this embed points at -- not "loginUrl" (that's for "Add me").
-            shareNetworkBtnEl.href = "https://linkenode.com";
+            // Always the app's own sign-up domain, regardless of which app
+            // instance this embed points at -- not "loginUrl" (that's for
+            // "Add me").
+            shareNetworkBtnEl.href = "https://app.linkenode.com";
             shareNetworkBtnEl.target = "_blank";
             shareNetworkBtnEl.rel = "noopener noreferrer";
           }
