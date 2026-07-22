@@ -15,7 +15,13 @@ export default function DeleteAccountSection({ profileName }: { profileName: str
   function handleConfirm() {
     setDeleting(true);
     deleteAccount()
-      .then(() => {
+      .then((result) => {
+        if (result.error) {
+          setDeleting(false);
+          setConfirmOpen(false);
+          toast(result.error);
+          return;
+        }
         posthog.reset();
         // Hard navigation, not router.push -- the session and every bit of
         // this account's data are gone, so a clean reload beats carrying

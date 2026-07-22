@@ -19,28 +19,46 @@ export async function signOut() {
 // admin API, but only if SUPABASE_SERVICE_ROLE_KEY is configured -- see
 // src/lib/supabase/admin.ts.
 //
+// Returns { error } rather than throwing -- Next.js redacts any error thrown
+// across a Server Action boundary in production ("An error occurred in the
+// Server Components render...", no message, just a digest), even one
+// constructed with a deliberately friendly message. Returning it as data is
+// the only way the caller's toast actually shows something useful instead of
+// that generic string.
+//
 // Deliberately doesn't call redirect() here -- this is invoked imperatively
 // from a client component's confirm dialog (not a <form action>), and a
 // server action's redirect() thrown mid-promise-chain would just get
 // swallowed by the caller's own .catch(). The caller navigates itself once
 // this resolves.
-export async function deleteAccount() {
+export async function deleteAccount(): Promise<{ error: string | null }> {
   const user = await requireSessionUser();
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("delete_own_account");
   if (error) {
-    throw new Error(
-      "Couldn't delete account — the delete_own_account function may be missing. See supabase/policies-reference.sql, section 13.",
-    );
+    return {
+      error:
+        "Couldn't delete account — the delete_own_account function may be missing. See supabase/policies-reference.sql, section 13.",
+    };
   }
 
-  const admin = createAdminClient();
-  if (admin) {
-    await admin.auth.admin.deleteUser(user.id);
+  try {
+    const admin = createAdminClient();
+    if (admin) {
+      await admin.auth.admin.deleteUser(user.id);
+    }
+    await supabase.auth.signOut();
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Account data was deleted, but signing out failed — try refreshing.",
+    };
   }
 
-  await supabase.auth.signOut();
+  return { error: null };
 }
 
 export async function updateWidgetSettings(settings: WidgetSettings) {
