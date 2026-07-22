@@ -377,6 +377,14 @@ $$;
 --     which then also deletes the actual auth.users row via the admin API
 --     (see src/lib/supabase/admin.ts) if SUPABASE_SERVICE_ROLE_KEY is
 --     configured.
+--
+--     Does NOT touch storage.objects -- Supabase runs a protective trigger
+--     that blocks direct SQL DELETEs against it ("Direct deletion from
+--     storage tables is not allowed. Use the Storage API instead."), since a
+--     raw SQL delete would drop the metadata row without removing the
+--     actual file from the object store. Avatar/work-sample files are
+--     removed via supabase.storage...remove() in deleteAccount itself,
+--     before this function runs.
 create or replace function public.delete_own_account()
 returns void
 language plpgsql
@@ -408,11 +416,6 @@ begin
       where from_profile_id = placeholder_id or to_profile_id = placeholder_id;
   end loop;
 
-  delete from storage.objects
-    where bucket_id = 'avatars'
-      and split_part(name, '.', 1) in (
-        select id::text from public.profiles where placeholder_owner_id = my_id
-      );
   delete from public.profiles where placeholder_owner_id = my_id;
 
   -- Every real connection I'm part of, including whichever note the OTHER
@@ -431,11 +434,16 @@ begin
 
   delete from public.work_samples where profile_id = my_id;
 
-  delete from storage.objects
-    where bucket_id = 'avatars' and split_part(name, '.', 1) = my_id::text;
-  delete from storage.objects
-    where bucket_id = 'work-samples' and split_part(name, '/', 1) = my_id::text;
-
   delete from public.profiles where id = my_id;
 end;
 $$;
+
+-- 14. "First external load" -- the activation timestamp for a given user's
+--     embed: the first time it genuinely loaded on a real external site, as
+--     opposed to being copied but never installed, or only ever seen in the
+--     dashboard's own live preview / the marketing demo. Written by
+--     src/app/api/beacon/route.ts (via the service-role client -- an
+--     anonymous visitor's beacon has no session to write through RLS with),
+--     set once and never touched again.
+alter table public.profiles
+  add column if not exists first_external_load_at timestamptz;

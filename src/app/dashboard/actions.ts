@@ -31,9 +31,49 @@ export async function signOut() {
 // server action's redirect() thrown mid-promise-chain would just get
 // swallowed by the caller's own .catch(). The caller navigates itself once
 // this resolves.
+function avatarStoragePath(avatarUrl: string | null): string | null {
+  return avatarUrl?.split("/storage/v1/object/public/avatars/")[1]?.split("?")[0] ?? null;
+}
+
 export async function deleteAccount(): Promise<{ error: string | null }> {
   const user = await requireSessionUser();
   const supabase = await createClient();
+
+  const { data: me, error: meError } = await supabase
+    .from("profiles")
+    .select("id, avatar_url")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (meError) return { error: `Couldn't delete account: ${meError.message}` };
+  if (!me) return { error: "No profile found for this account." };
+
+  const { data: placeholders, error: placeholdersError } = await supabase
+    .from("profiles")
+    .select("id, avatar_url")
+    .eq("placeholder_owner_id", me.id);
+  if (placeholdersError) {
+    return { error: `Couldn't delete account: ${placeholdersError.message}` };
+  }
+
+  // Storage has to be cleaned up through its own API, not SQL -- Supabase
+  // runs a protective trigger that blocks direct DELETEs against
+  // storage.objects ("Direct deletion from storage tables is not allowed.
+  // Use the Storage API instead."), since that would drop the metadata row
+  // without removing the actual file from the object store. This has to
+  // happen before delete_own_account() below, while these rows (and the
+  // avatar_url/paths they point to) still exist to look up. Best-effort --
+  // a failed removal here shouldn't block the rest of account deletion,
+  // since the row that referenced it is about to be gone either way.
+  const avatarPaths = [me, ...(placeholders ?? [])]
+    .map((p) => avatarStoragePath(p.avatar_url))
+    .filter((p): p is string => !!p);
+  if (avatarPaths.length > 0) {
+    await supabase.storage.from("avatars").remove(avatarPaths);
+  }
+  const { data: workSampleFiles } = await supabase.storage.from("work-samples").list(me.id);
+  if (workSampleFiles && workSampleFiles.length > 0) {
+    await supabase.storage.from("work-samples").remove(workSampleFiles.map((f) => `${me.id}/${f.name}`));
+  }
 
   const { error } = await supabase.rpc("delete_own_account");
   if (error) {

@@ -1,5 +1,44 @@
       window.__initNetworkWidget = function (widgetData, options) {
         options = options || {};
+
+        // Fired unconditionally from here (not just from the real embed
+        // loader, public/widget.js) so it also covers the dashboard's own
+        // live preview and the marketing page's demo -- the /api/beacon
+        // endpoint itself filters those out by hostname, since "is this a
+        // real external site" can only be answered from window.location,
+        // not from here. navigator.sendBeacon so a real visitor's page
+        // never waits on us or on PostHog; falls back to a keepalive fetch
+        // on the rare browser without it. No PostHog JS/cookies run in a
+        // real embed at all -- visitors stay completely anonymous, only
+        // the widget owner's own (already-public) profile id is attached.
+        function sendBeacon(eventName) {
+          try {
+            var profile = widgetData.profile || {};
+            var payload = JSON.stringify({
+              event: eventName,
+              profileId: profile.id,
+              embedKey: profile.embed_key,
+              pageUrl: window.location.href,
+              referrer: document.referrer || null,
+              timestamp: new Date().toISOString(),
+            });
+            var url = (options.appOrigin || "") + "/api/beacon";
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+            } else if (window.fetch) {
+              fetch(url, {
+                method: "POST",
+                body: payload,
+                headers: { "Content-Type": "application/json" },
+                keepalive: true,
+              });
+            }
+          } catch (e) {
+            // Never let beacon delivery break the widget itself.
+          }
+        }
+        sendBeacon("load");
+
         var settings = (widgetData.profile && widgetData.profile.widget_settings) || {};
         var mode = options.mode || "floating";
         var initialTheme = options.theme || settings.theme || "light";
@@ -88,8 +127,14 @@
           if (shareNetworkBtnEl) {
             // Always the app's own sign-up domain, regardless of which app
             // instance this embed points at -- not "loginUrl" (that's for
-            // "Add me").
-            shareNetworkBtnEl.href = "https://app.linkenode.com";
+            // "Add me"). ?ref=badge&host={embed_key} lets the landing page
+            // (see PostHogInit) credit whichever embed recruited this
+            // visitor, so a signup that started here carries "which of my
+            // users' widgets brought this person in" all the way through
+            // the funnel -- who your super-spreader users are.
+            var embedKey = (widgetData.profile && widgetData.profile.embed_key) || "";
+            shareNetworkBtnEl.href =
+              "https://app.linkenode.com?ref=badge&host=" + encodeURIComponent(embedKey);
             shareNetworkBtnEl.target = "_blank";
             shareNetworkBtnEl.rel = "noopener noreferrer";
           }
@@ -1617,6 +1662,14 @@
 
         /* ---- floating launcher expand/collapse ---- */
         function expandWidget() {
+          // Guarded on the actual collapsed->expanded transition -- this
+          // fires from several call sites (the launcher click, any
+          // data-network-widget-open trigger, linkenode:open/toggle), and
+          // an already-open widget re-triggering one of those shouldn't
+          // inflate the "opened" engagement count.
+          if (!widgetRoot.classList.contains("expanded")) {
+            sendBeacon("open");
+          }
           widgetRoot.classList.add("expanded");
         }
         function collapseWidget() {
