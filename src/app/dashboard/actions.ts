@@ -37,9 +37,14 @@ export async function deleteAccount(): Promise<{ error: string | null }> {
 
   const { error } = await supabase.rpc("delete_own_account");
   if (error) {
+    // Surface Postgres/PostgREST's own message+hint rather than a canned
+    // guess -- a stale PostgREST schema cache (common right after creating a
+    // function via the SQL editor -- see supabase/policies-reference.sql,
+    // section 13), a permissions issue, and the function genuinely missing
+    // all report as "error" here but need different fixes, and error.hint
+    // usually says which.
     return {
-      error:
-        "Couldn't delete account — the delete_own_account function may be missing. See supabase/policies-reference.sql, section 13.",
+      error: `Couldn't delete account: ${error.message}${error.hint ? ` — ${error.hint}` : ""}`,
     };
   }
 
